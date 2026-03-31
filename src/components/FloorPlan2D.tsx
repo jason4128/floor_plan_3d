@@ -257,16 +257,21 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComp
           door.end = { x: door.end.x + dx, y: door.end.y + dy };
           setDragging({ ...dragging, dragStartPos: { x: dragging.dragStartPos.x + dx, y: dragging.dragStartPos.y + dy } });
         }
-      } else if (dragging.type === 'room') {
-        if (e.shiftKey && dragging.dragStartPos) {
-          let dx = coords.x - dragging.dragStartPos.x;
-          let dy = coords.y - dragging.dragStartPos.y;
+      } else if (dragging.type === 'room' && dragging.dragStartPos) {
+        let dx = coords.x - dragging.dragStartPos.x;
+        let dy = coords.y - dragging.dragStartPos.y;
+        
+        if (e.shiftKey) {
           if (Math.abs(dx) > Math.abs(dy)) dy = 0;
           else dx = 0;
-          newData.rooms[dragging.index].position = { x: dragging.dragStartPos.x + dx, y: dragging.dragStartPos.y + dy };
-        } else {
-          newData.rooms[dragging.index].position = coords;
         }
+
+        const room = newData.rooms[dragging.index];
+        newData.rooms[dragging.index] = {
+          ...room,
+          position: { x: room.position.x + dx, y: room.position.y + dy }
+        };
+        setDragging({ ...dragging, dragStartPos: { x: dragging.dragStartPos.x + dx, y: dragging.dragStartPos.y + dy } });
       }
       onChange(newData);
     }
@@ -636,7 +641,8 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComp
                       } else {
                         setSelectedItems([{ type: 'room', index: i }]);
                       }
-                      setDragging({ type: 'room', index: i });
+                      const coords = getMouseCoords(e);
+                      setDragging({ type: 'room', index: i, point: 'center', dragStartPos: coords });
                     }}
                     onDoubleClick={(e) => {
                       e.stopPropagation();

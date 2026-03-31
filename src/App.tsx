@@ -1,10 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, LogIn, LogOut, Eye, EyeOff, Settings, X } from 'lucide-react';
+import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, Eye, EyeOff, Settings, X, Undo2, Redo2, CheckSquare } from 'lucide-react';
 import { FloorPlan3D } from './components/FloorPlan3D';
 import { FloorPlan2D } from './components/FloorPlan2D';
 import { analyzeFloorPlan, FloorPlanData } from './lib/gemini';
-import { auth, db, signInWithGoogle } from './lib/firebase';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { db } from './lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -32,19 +31,67 @@ export default function App() {
   const [fileType, setFileType] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [userApiKey, setUserApiKey] = useState<string>(() => localStorage.getItem('gemini_api_key') || '');
   const [showSettings, setShowSettings] = useState(false);
+  
+  // History for Undo/Redo
+  const [history, setHistory] = useState<FloorPlanData[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
-  
-  // Auth listener
+
+  const updateData = (newData: FloorPlanData, skipHistory = false) => {
+    setData(newData);
+    if (!skipHistory) {
+      const newHistory = history.slice(0, historyIndex + 1);
+      newHistory.push(JSON.parse(JSON.stringify(newData)));
+      // Limit history size
+      if (newHistory.length > 50) newHistory.shift();
+      setHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+    }
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setData(JSON.parse(JSON.stringify(history[newIndex])));
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setData(JSON.parse(JSON.stringify(history[newIndex])));
+    }
+  };
+
+  // Keyboard shortcuts for Undo/Redo
   React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-    });
-    return () => unsubscribe();
-  }, []);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        if (data) {
+          e.preventDefault();
+          const all: { type: 'wall' | 'door' | 'room', index: number }[] = [];
+          data.walls.forEach((_, i) => all.push({ type: 'wall', index: i }));
+          data.doors.forEach((_, i) => all.push({ type: 'door', index: i }));
+          data.rooms.forEach((_, i) => all.push({ type: 'room', index: i }));
+          setSelectedItems(all);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [history, historyIndex, data]);
 
   // Check for shared project ID in URL
   React.useEffect(() => {
@@ -123,11 +170,17 @@ export default function App() {
 
   const handleAnalyze = async () => {
     if (!base64Data) return;
+    
+    if (!userApiKey) {
+      setShowSettings(true);
+      alert("請先設定 Gemini API Key 才能使用 AI 分析功能。");
+      return;
+    }
 
     setIsProcessing(true);
     try {
       const extractedData = await analyzeFloorPlan(base64Data, fileType, userApiKey);
-      setData(extractedData);
+      updateData(extractedData);
       setStep('edit2d'); // Move to 2D edit step
     } catch (error) {
       console.error("Error processing floor plan:", error);
@@ -139,7 +192,7 @@ export default function App() {
 
   const handleDeleteSelected = () => {
     if (!data || selectedItems.length === 0) return;
-    const newData = { ...data };
+    const newData = JSON.parse(JSON.stringify(data));
     
     // Sort indices in descending order to avoid index shift issues
     const wallsToDelete = selectedItems.filter(item => item.type === 'wall').map(item => item.index).sort((a, b) => b - a);
@@ -150,14 +203,14 @@ export default function App() {
     doorsToDelete.forEach(index => newData.doors.splice(index, 1));
     roomsToDelete.forEach(index => newData.rooms.splice(index, 1));
 
-    setData(newData);
+    updateData(newData);
     setSelectedItems([]);
   };
 
   const handleClearAll = () => {
     if (!data) return;
     if (window.confirm('確定要清除所有牆面與門嗎？')) {
-      setData({ walls: [], doors: [], rooms: [] });
+      updateData({ walls: [], doors: [], rooms: [] });
       setSelectedItems([]);
     }
   };
@@ -188,7 +241,7 @@ export default function App() {
     try {
       const projectId = Math.random().toString(36).substring(2, 15);
       const projectData = {
-        userId: user ? user.uid : 'anonymous',
+        userId: 'anonymous',
         data,
         imagePreview,
         base64Data,
@@ -222,7 +275,7 @@ export default function App() {
     reader.onload = (e) => {
       try {
         const project = JSON.parse(e.target?.result as string);
-        setData(project.data);
+        updateData(project.data);
         setImagePreview(project.imagePreview);
         setBase64Data(project.base64Data);
         setFileType(project.fileType);
@@ -260,23 +313,6 @@ export default function App() {
               >
                 <Settings className="w-4 h-4" />
               </button>
-              {user ? (
-                <button 
-                  onClick={() => signOut(auth)}
-                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
-                  title={`已登入: ${user.email}`}
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              ) : (
-                <button 
-                  onClick={() => signInWithGoogle()}
-                  className="p-2 hover:bg-blue-50 rounded-full text-blue-600"
-                  title="登入"
-                >
-                  <LogIn className="w-4 h-4" />
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -419,6 +455,49 @@ export default function App() {
                     >
                       <Plus className="w-4 h-4" /> 文字
                     </button>
+                    <div className="flex gap-1 col-span-2">
+                      <button 
+                        onClick={handleUndo}
+                        disabled={historyIndex <= 0}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 disabled:opacity-50 transition-colors"
+                        title="復原 (Ctrl+Z)"
+                      >
+                        <Undo2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={handleRedo}
+                        disabled={historyIndex >= history.length - 1}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 disabled:opacity-50 transition-colors"
+                        title="重做 (Ctrl+Shift+Z)"
+                      >
+                        <Redo2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    <div className="col-span-2 space-y-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase px-1">全選</p>
+                      <div className="grid grid-cols-3 gap-1">
+                        <button 
+                          onClick={() => setSelectedItems(data.walls.map((_, i) => ({ type: 'wall', index: i })))}
+                          className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[10px] font-bold bg-slate-50 text-slate-600 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
+                        >
+                          <CheckSquare className="w-3 h-3" /> 牆面
+                        </button>
+                        <button 
+                          onClick={() => setSelectedItems(data.doors.map((_, i) => ({ type: 'door', index: i })))}
+                          className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[10px] font-bold bg-slate-50 text-slate-600 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                        >
+                          <CheckSquare className="w-3 h-3" /> 門
+                        </button>
+                        <button 
+                          onClick={() => setSelectedItems((data.rooms || []).map((_, i) => ({ type: 'room', index: i })))}
+                          className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[10px] font-bold bg-slate-50 text-slate-600 border border-slate-200 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 transition-colors"
+                        >
+                          <CheckSquare className="w-3 h-3" /> 文字
+                        </button>
+                      </div>
+                    </div>
+
                     <button 
                       onClick={handleClearAll}
                       className="col-span-2 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 transition-colors"
@@ -627,7 +706,7 @@ export default function App() {
         {step === 'edit2d' && data && (
           <FloorPlan2D 
             data={data} 
-            onChange={setData} 
+            onChange={(newData) => updateData(newData)} 
             imagePreview={imagePreview}
             drawMode={drawMode}
             onDrawComplete={() => setDrawMode('none')}
