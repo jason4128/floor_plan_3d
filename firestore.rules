@@ -35,10 +35,8 @@ service cloud.firestore {
       // Allow anyone to read a project if they have the ID (for sharing)
       allow read: if true;
       
-      // Only owner can create/update their own projects
-      allow create: if isAuthenticated() && 
-                      request.resource.data.userId == request.auth.uid &&
-                      isValidProject(request.resource.data);
+      // Allow anyone to create a project (for anonymous sharing)
+      allow create: if isValidProject(request.resource.data);
                       
       allow update: if isOwner(resource.data.userId) &&
                       request.resource.data.userId == resource.data.userId &&

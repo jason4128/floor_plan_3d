@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, LogIn, LogOut, Eye, EyeOff } from 'lucide-react';
+import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, LogIn, LogOut, Eye, EyeOff, Settings, X } from 'lucide-react';
 import { FloorPlan3D } from './components/FloorPlan3D';
 import { FloorPlan2D } from './components/FloorPlan2D';
 import { analyzeFloorPlan, FloorPlanData } from './lib/gemini';
@@ -33,6 +33,8 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [userApiKey, setUserApiKey] = useState<string>(() => localStorage.getItem('gemini_api_key') || '');
+  const [showSettings, setShowSettings] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   
@@ -124,12 +126,12 @@ export default function App() {
 
     setIsProcessing(true);
     try {
-      const extractedData = await analyzeFloorPlan(base64Data, fileType);
+      const extractedData = await analyzeFloorPlan(base64Data, fileType, userApiKey);
       setData(extractedData);
       setStep('edit2d'); // Move to 2D edit step
     } catch (error) {
       console.error("Error processing floor plan:", error);
-      alert("處理平面圖失敗，請重試。");
+      alert(error instanceof Error ? error.message : "處理平面圖失敗，請重試。");
     } finally {
       setIsProcessing(false);
     }
@@ -181,22 +183,12 @@ export default function App() {
 
   const handleShare = async () => {
     if (!data) return;
-    if (!user) {
-      if (window.confirm("請先登入以分享專案。是否現在登入？")) {
-        try {
-          await signInWithGoogle();
-        } catch (e) {
-          console.error(e);
-        }
-      }
-      return;
-    }
 
     setIsSaving(true);
     try {
       const projectId = Math.random().toString(36).substring(2, 15);
       const projectData = {
-        userId: user.uid,
+        userId: user ? user.uid : 'anonymous',
         data,
         imagePreview,
         base64Data,
@@ -260,23 +252,32 @@ export default function App() {
                 將 2D 平面圖轉換為 3D 模型。
               </p>
             </div>
-            {user ? (
+            <div className="flex gap-2">
               <button 
-                onClick={() => signOut(auth)}
+                onClick={() => setShowSettings(true)}
                 className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
-                title={`已登入: ${user.email}`}
+                title="設定 API Key"
               >
-                <LogOut className="w-4 h-4" />
+                <Settings className="w-4 h-4" />
               </button>
-            ) : (
-              <button 
-                onClick={() => signInWithGoogle()}
-                className="p-2 hover:bg-blue-50 rounded-full text-blue-600"
-                title="登入"
-              >
-                <LogIn className="w-4 h-4" />
-              </button>
-            )}
+              {user ? (
+                <button 
+                  onClick={() => signOut(auth)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
+                  title={`已登入: ${user.email}`}
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              ) : (
+                <button 
+                  onClick={() => signInWithGoogle()}
+                  className="p-2 hover:bg-blue-50 rounded-full text-blue-600"
+                  title="登入"
+                >
+                  <LogIn className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -641,6 +642,52 @@ export default function App() {
 
         {step === 'view3d' && data && (
           <FloorPlan3D data={data} wallHeight={wallHeight} wallThickness={wallThickness} />
+        )}
+
+        {/* Settings Modal */}
+        {showSettings && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-blue-600" />
+                  API 設定
+                </h3>
+                <button 
+                  onClick={() => setShowSettings(false)}
+                  className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">Gemini API Key</label>
+                  <input 
+                    type="password"
+                    value={userApiKey}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setUserApiKey(val);
+                      localStorage.setItem('gemini_api_key', val);
+                    }}
+                    placeholder="輸入您的 API Key..."
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-mono"
+                  />
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    此金鑰將儲存在您的瀏覽器中，用於 AI 分析平面圖。
+                    如果您在 GitHub Pages 上使用，請務必在此設定金鑰。
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowSettings(false)}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-200"
+                >
+                  儲存並關閉
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

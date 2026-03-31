@@ -193,28 +193,80 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComp
       const newData = { ...data };
       if (dragging.type === 'wall') {
         const wall = newData.walls[dragging.index];
-        if (dragging.point === 'start') wall.start = coords;
-        else if (dragging.point === 'end') wall.end = coords;
-        else if (dragging.point === 'center' && dragging.dragStartPos) {
-          const dx = coords.x - dragging.dragStartPos.x;
-          const dy = coords.y - dragging.dragStartPos.y;
+        if (dragging.point === 'start') {
+          let newStart = coords;
+          if (e.shiftKey) {
+            const dx = Math.abs(newStart.x - wall.end.x);
+            const dy = Math.abs(newStart.y - wall.end.y);
+            if (dx > dy) newStart = { x: newStart.x, y: wall.end.y };
+            else newStart = { x: wall.end.x, y: newStart.y };
+          }
+          wall.start = newStart;
+        } else if (dragging.point === 'end') {
+          let newEnd = coords;
+          if (e.shiftKey) {
+            const dx = Math.abs(newEnd.x - wall.start.x);
+            const dy = Math.abs(newEnd.y - wall.start.y);
+            if (dx > dy) newEnd = { x: newEnd.x, y: wall.start.y };
+            else newEnd = { x: wall.start.x, y: newEnd.y };
+          }
+          wall.end = newEnd;
+        } else if (dragging.point === 'center' && dragging.dragStartPos) {
+          let dx = coords.x - dragging.dragStartPos.x;
+          let dy = coords.y - dragging.dragStartPos.y;
+          
+          if (e.shiftKey) {
+            if (Math.abs(dx) > Math.abs(dy)) dy = 0;
+            else dx = 0;
+          }
+
           wall.start = { x: wall.start.x + dx, y: wall.start.y + dy };
           wall.end = { x: wall.end.x + dx, y: wall.end.y + dy };
-          setDragging({ ...dragging, dragStartPos: coords });
+          setDragging({ ...dragging, dragStartPos: { x: dragging.dragStartPos.x + dx, y: dragging.dragStartPos.y + dy } });
         }
       } else if (dragging.type === 'door') {
         const door = newData.doors[dragging.index];
-        if (dragging.point === 'start') door.start = coords;
-        else if (dragging.point === 'end') door.end = coords;
-        else if (dragging.point === 'center' && dragging.dragStartPos) {
-          const dx = coords.x - dragging.dragStartPos.x;
-          const dy = coords.y - dragging.dragStartPos.y;
+        if (dragging.point === 'start') {
+          let newStart = coords;
+          if (e.shiftKey) {
+            const dx = Math.abs(newStart.x - door.end.x);
+            const dy = Math.abs(newStart.y - door.end.y);
+            if (dx > dy) newStart = { x: newStart.x, y: door.end.y };
+            else newStart = { x: door.end.x, y: newStart.y };
+          }
+          door.start = newStart;
+        } else if (dragging.point === 'end') {
+          let newEnd = coords;
+          if (e.shiftKey) {
+            const dx = Math.abs(newEnd.x - door.start.x);
+            const dy = Math.abs(newEnd.y - door.start.y);
+            if (dx > dy) newEnd = { x: newEnd.x, y: door.start.y };
+            else newEnd = { x: door.start.x, y: newEnd.y };
+          }
+          door.end = newEnd;
+        } else if (dragging.point === 'center' && dragging.dragStartPos) {
+          let dx = coords.x - dragging.dragStartPos.x;
+          let dy = coords.y - dragging.dragStartPos.y;
+
+          if (e.shiftKey) {
+            if (Math.abs(dx) > Math.abs(dy)) dy = 0;
+            else dx = 0;
+          }
+
           door.start = { x: door.start.x + dx, y: door.start.y + dy };
           door.end = { x: door.end.x + dx, y: door.end.y + dy };
-          setDragging({ ...dragging, dragStartPos: coords });
+          setDragging({ ...dragging, dragStartPos: { x: dragging.dragStartPos.x + dx, y: dragging.dragStartPos.y + dy } });
         }
       } else if (dragging.type === 'room') {
-        newData.rooms[dragging.index].position = coords;
+        if (e.shiftKey && dragging.dragStartPos) {
+          let dx = coords.x - dragging.dragStartPos.x;
+          let dy = coords.y - dragging.dragStartPos.y;
+          if (Math.abs(dx) > Math.abs(dy)) dy = 0;
+          else dx = 0;
+          newData.rooms[dragging.index].position = { x: dragging.dragStartPos.x + dx, y: dragging.dragStartPos.y + dy };
+        } else {
+          newData.rooms[dragging.index].position = coords;
+        }
       }
       onChange(newData);
     }

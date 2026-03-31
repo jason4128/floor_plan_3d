@@ -1,7 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 export interface Point {
   x: number;
   y: number;
@@ -30,7 +28,15 @@ export interface FloorPlanData {
   rooms: Room[];
 }
 
-export async function analyzeFloorPlan(base64Image: string, mimeType: string): Promise<FloorPlanData> {
+export async function analyzeFloorPlan(base64Image: string, mimeType: string, customApiKey?: string): Promise<FloorPlanData> {
+  const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error("Missing Gemini API Key. Please provide it in the settings.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
   const prompt = `你是一位專業的建築工程師與室內設計師。請精確分析這張工程平面圖。
   1. 辨識所有結構牆（粗線）與隔間牆（細線）。
   2. 辨識所有門的開口位置與寬度。
