@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, Eye, EyeOff, Settings, X, Undo2, Redo2, CheckSquare, Cloud, FolderOpen } from 'lucide-react';
+import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, Eye, EyeOff, Settings, X, Undo2, Redo2, CheckSquare, Cloud, FolderOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { FloorPlan3D } from './components/FloorPlan3D';
 import { FloorPlan2D } from './components/FloorPlan2D';
 import { analyzeFloorPlan, FloorPlanData } from './lib/gemini';
@@ -35,6 +35,7 @@ export default function App() {
   const [userApiKey, setUserApiKey] = useState<string>(() => localStorage.getItem('gemini_api_key') || '');
   const [showSettings, setShowSettings] = useState(false);
   const [showCloudProjects, setShowCloudProjects] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [cloudProjectIdInput, setCloudProjectIdInput] = useState('');
   const [savedProjects, setSavedProjects] = useState<{id: string, date: string}[]>(() => {
     try {
@@ -395,40 +396,41 @@ export default function App() {
   return (
     <div className="flex h-screen w-full bg-slate-50 text-slate-900 overflow-hidden">
       {/* Left Panel: Controls */}
-      <div className="w-80 bg-white border-r border-slate-200 shadow-sm flex flex-col z-10">
-        <div className="p-6 border-b border-slate-100">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <ImageIcon className="w-6 h-6 text-blue-600" />
-                平面圖轉 3D
-              </h1>
-              <p className="text-sm text-slate-500 mt-1">
-                將 2D 平面圖轉換為 3D 模型。
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setShowCloudProjects(true)}
-                className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
-                title="雲端專案"
-              >
-                <Cloud className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setShowSettings(true)}
-                className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
-                title="設定 API Key"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
+      <div className={`relative flex-shrink-0 transition-all duration-300 ${isSidebarOpen ? 'w-80' : 'w-0'} bg-white z-20`}>
+        <div className={`absolute inset-0 w-80 bg-white border-r border-slate-200 shadow-sm flex flex-col overflow-hidden transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="p-6 border-b border-slate-100">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <ImageIcon className="w-6 h-6 text-blue-600" />
+                  平面圖轉 3D
+                </h1>
+                <p className="text-sm text-slate-500 mt-1">
+                  將 2D 平面圖轉換為 3D 模型。
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowCloudProjects(true)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
+                  title="雲端專案"
+                >
+                  <Cloud className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => setShowSettings(true)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
+                  title="設定 API Key"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="p-6 flex-1 overflow-y-auto flex flex-col gap-6">
-          {/* Step 1: Upload */}
-          <div className={`space-y-3 ${step !== 'upload' ? 'opacity-50' : ''}`}>
+          <div className="p-6 flex-1 overflow-y-auto flex flex-col gap-6">
+            {/* Step 1: Upload */}
+            <div className={`space-y-3 ${step !== 'upload' ? 'opacity-50' : ''}`}>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <Upload className="w-4 h-4" /> 1. 上傳平面圖
             </h2>
@@ -792,6 +794,17 @@ export default function App() {
           )}
         </div>
       </div>
+    </div>
+      
+      {/* Sidebar Toggle Button */}
+      <button
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className={`absolute top-1/2 -translate-y-1/2 z-30 bg-white border border-slate-200 shadow-md rounded-full p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition-all duration-300 flex items-center justify-center`}
+        style={{ left: isSidebarOpen ? '304px' : '0px', transform: isSidebarOpen ? 'translateY(-50%)' : 'translate(16px, -50%)' }}
+        title={isSidebarOpen ? "隱藏側邊欄" : "顯示側邊欄"}
+      >
+        {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+      </button>
 
       {/* Right Panel: Viewport */}
       <div className="flex-1 relative bg-slate-900">
