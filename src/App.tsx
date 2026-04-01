@@ -277,12 +277,65 @@ export default function App() {
 
     setIsSaving(true);
     try {
+      let finalImagePreview = imagePreview;
+      let finalBase64Data = base64Data;
+
+      if (imagePreview) {
+        // Approximate size of base64 string in bytes
+        const sizeInBytes = Math.round((imagePreview.length * 3) / 4);
+        const MAX_SIZE = 800000; // ~800KB
+
+        if (sizeInBytes > MAX_SIZE) {
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = imagePreview;
+          });
+
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (ctx) {
+            let width = img.width;
+            let height = img.height;
+            let quality = 0.7;
+            
+            // Scale down if dimensions are too large
+            const MAX_DIM = 1200;
+            if (width > MAX_DIM || height > MAX_DIM) {
+              const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+              width = Math.floor(width * ratio);
+              height = Math.floor(height * ratio);
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Draw image on white background (in case of transparent PNG)
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            finalImagePreview = canvas.toDataURL('image/jpeg', quality);
+            
+            // If still too large, reduce quality further
+            while (Math.round((finalImagePreview.length * 3) / 4) > MAX_SIZE && quality > 0.1) {
+              quality -= 0.1;
+              finalImagePreview = canvas.toDataURL('image/jpeg', quality);
+            }
+            
+            finalBase64Data = finalImagePreview.split(',')[1];
+          }
+        }
+      }
+
       const projectId = Math.random().toString(36).substring(2, 15);
       const projectData = {
         userId: 'anonymous',
         data,
-        imagePreview: imagePreview || null,
-        base64Data: base64Data || null,
+        imagePreview: finalImagePreview || null,
+        base64Data: finalBase64Data || null,
         fileType: fileType || null,
         wallHeight,
         wallThickness,
