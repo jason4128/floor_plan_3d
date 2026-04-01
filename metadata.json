@@ -1,5 +1,5 @@
 {
-  "name": "FloorPlan to 3D",
+  "name": "工程平面圖(3D平面轉換)",
   "description": "Convert 2D floor plans into interactive 3D models using AI.",
   "requestFramePermissions": []
 }
