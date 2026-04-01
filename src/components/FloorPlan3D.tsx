@@ -11,9 +11,29 @@ interface FloorPlan3DProps {
   wallThickness: number;
   imageDimensions: { width: number, height: number } | null;
   labelSize3D: number;
+  showDoors?: boolean;
 }
 
 const SCALE = 0.02; // Scale down to manageable units
+
+function PlayerTracker({ markerRef, dirRef, width, heightDim }: { markerRef: any, dirRef: any, width: number, heightDim: number }) {
+  const { camera } = useThree();
+  useFrame(() => {
+    if (markerRef.current && dirRef.current) {
+      const x2d = camera.position.x / SCALE + width / 2;
+      const y2d = camera.position.z / SCALE + heightDim / 2;
+      markerRef.current.setAttribute('cx', x2d.toString());
+      markerRef.current.setAttribute('cy', y2d.toString());
+
+      const angle = camera.rotation.y;
+      const dx = Math.sin(angle) * -40;
+      const dy = Math.cos(angle) * -40;
+      
+      dirRef.current.setAttribute('d', `M ${x2d} ${y2d} L ${x2d + dx} ${y2d + dy}`);
+    }
+  });
+  return null;
+}
 
 function CameraController({ topDown }: { topDown: boolean }) {
   const { camera, controls } = useThree();
@@ -32,7 +52,7 @@ function CameraController({ topDown }: { topDown: boolean }) {
   return null;
 }
 
-function FirstPersonController({ active }: { active: boolean }) {
+function FirstPersonController({ active, startMarker }: { active: boolean, startMarker: {x: number, z: number} | null }) {
   const { camera } = useThree();
   const keys = useRef<{ [key: string]: boolean }>({});
   const rotationY = useRef(0);
@@ -42,6 +62,11 @@ function FirstPersonController({ active }: { active: boolean }) {
     if (!active) return;
     
     // Initialize camera
+    if (startMarker) {
+      position.current.set(startMarker.x, 1.6, startMarker.z);
+    } else {
+      position.current.set(0, 1.6, 5);
+    }
     camera.position.copy(position.current);
     camera.rotation.set(0, 0, 0);
     rotationY.current = 0;
@@ -134,14 +159,102 @@ function WallMesh({
   );
 }
 
-export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, labelSize3D }: FloorPlan3DProps) {
+export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, labelSize3D, showDoors = true }: FloorPlan3DProps) {
   const width = imageDimensions?.width || 1000;
   const heightDim = imageDimensions?.height || 1000;
   const [topDown, setTopDown] = React.useState(false);
   const [firstPerson, setFirstPerson] = React.useState(false);
+  const [startMarker, setStartMarker] = React.useState<{x: number, z: number} | null>(null);
+
+  const markerRef = useRef<SVGCircleElement>(null);
+  const dirRef = useRef<SVGPathElement>(null);
+
+  const splitWalls = React.useMemo(() => {
+    if (!data) return [];
+    let resultWalls = [...data.walls];
+    
+    data.doors.forEach(door => {
+      const newWalls: typeof data.walls = [];
+      resultWalls.forEach(wall => {
+        const dist = (p1: any, p2: any) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        const wallLen = dist(wall.start, wall.end);
+        if (wallLen === 0) {
+          newWalls.push(wall);
+          return;
+        }
+
+        const getProjection = (p: any) => {
+          const A = wall.start;
+          const B = wall.end;
+          const dot = (p.x - A.x) * (B.x - A.x) + (p.y - A.y) * (B.y - A.y);
+          const t = Math.max(0, Math.min(1, dot / (wallLen * wallLen)));
+          return {
+            x: A.x + t * (B.x - A.x),
+            y: A.y + t * (B.y - A.y),
+            t: t
+          };
+        };
+
+        const proj1 = getProjection(door.start);
+        const proj2 = getProjection(door.end);
+
+        const dist1 = dist(door.start, proj1);
+        const dist2 = dist(door.end, proj2);
+
+        if (dist1 < 40 && dist2 < 40) {
+          if ((proj1.t > 0 && proj1.t < 1) || (proj2.t > 0 && proj2.t < 1) || (proj1.t === 0 && proj2.t === 1) || (proj1.t === 1 && proj2.t === 0)) {
+            const tMin = Math.min(proj1.t, proj2.t);
+            const tMax = Math.max(proj1.t, proj2.t);
+            
+            const ptMin = { x: wall.start.x + tMin * (wall.end.x - wall.start.x), y: wall.start.y + tMin * (wall.end.y - wall.start.y) };
+            const ptMax = { x: wall.start.x + tMax * (wall.end.x - wall.start.x), y: wall.start.y + tMax * (wall.end.y - wall.start.y) };
+
+            if (dist(wall.start, ptMin) > 5) {
+              newWalls.push({ start: wall.start, end: ptMin });
+            }
+            if (dist(ptMax, wall.end) > 5) {
+              newWalls.push({ start: ptMax, end: wall.end });
+            }
+          } else {
+            newWalls.push(wall);
+          }
+        } else {
+          newWalls.push(wall);
+        }
+      });
+      resultWalls = newWalls;
+    });
+    return resultWalls;
+  }, [data]);
 
   return (
     <div className="w-full h-full bg-slate-900 relative">
+      {firstPerson && data && (
+        <div className="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur p-2 rounded-lg shadow-lg border border-slate-200" style={{ width: '200px', height: '200px' }}>
+          <svg viewBox={`0 0 ${width} ${heightDim}`} className="w-full h-full">
+            {data.walls.map((wall, i) => (
+              <line 
+                key={i} 
+                x1={wall.start.x} y1={wall.start.y} 
+                x2={wall.end.x} y2={wall.end.y} 
+                stroke="#64748b" strokeWidth="15" strokeLinecap="round" 
+              />
+            ))}
+            {data.doors.map((door, i) => (
+              <line 
+                key={i} 
+                x1={door.start.x} y1={door.start.y} 
+                x2={door.end.x} y2={door.end.y} 
+                stroke="#fca5a5" strokeWidth="15" strokeLinecap="round" 
+                opacity={showDoors ? 1 : 0.2}
+              />
+            ))}
+            <circle ref={markerRef} r="20" fill="#3b82f6" />
+            <path ref={dirRef} stroke="#3b82f6" strokeWidth="12" strokeLinecap="round" />
+          </svg>
+        </div>
+      )}
+
       <div className="absolute top-4 right-4 z-10 flex gap-2">
         <button 
           onClick={() => {
@@ -184,7 +297,8 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
 
       <Canvas camera={{ position: [0, 15, 20], fov: 50 }} shadows>
         {!firstPerson && <CameraController topDown={topDown} />}
-        <FirstPersonController active={firstPerson} />
+        <FirstPersonController active={firstPerson} startMarker={startMarker} />
+        {firstPerson && <PlayerTracker markerRef={markerRef} dirRef={dirRef} width={width} heightDim={heightDim} />}
         
         <ambientLight intensity={0.6} />
         <directionalLight 
@@ -217,14 +331,35 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
         />
         
         {/* Floor */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-          <planeGeometry args={[30, 30]} />
+        <mesh 
+          rotation={[-Math.PI / 2, 0, 0]} 
+          position={[0, -0.01, 0]} 
+          receiveShadow
+          onDoubleClick={(e) => {
+            if (!firstPerson) {
+              setStartMarker({ x: e.point.x, z: e.point.z });
+            }
+          }}
+        >
+          <planeGeometry args={[100, 100]} />
           <meshStandardMaterial color="#1e293b" />
         </mesh>
 
+        {!firstPerson && startMarker && (
+          <mesh position={[startMarker.x, 0.1, startMarker.z]}>
+            <sphereGeometry args={[0.3, 16, 16]} />
+            <meshStandardMaterial color="#3b82f6" />
+            <Html position={[0, 0.5, 0]} center>
+              <div className="bg-blue-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap shadow-lg">
+                出發點
+              </div>
+            </Html>
+          </mesh>
+        )}
+
         {data && (
           <group>
-            {data.walls.map((wall, i) => (
+            {splitWalls.map((wall, i) => (
               <WallMesh 
                 key={`wall-${i}`} 
                 start={wall.start} 
@@ -235,15 +370,28 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
               />
             ))}
             {data.doors.map((door, i) => (
-              <WallMesh 
-                key={`door-${i}`} 
-                start={door.start} 
-                end={door.end} 
-                height={wallHeight * 0.8} 
-                color="#fca5a5" 
-                thickness={wallThickness * 1.2}
-                imageDimensions={imageDimensions}
-              />
+              <React.Fragment key={`door-group-${i}`}>
+                {showDoors && (
+                  <WallMesh 
+                    start={door.start} 
+                    end={door.end} 
+                    height={wallHeight * 0.8} 
+                    color="#fca5a5" 
+                    thickness={wallThickness * 1.2}
+                    imageDimensions={imageDimensions}
+                  />
+                )}
+                {/* Wall above the door */}
+                <WallMesh 
+                  start={door.start} 
+                  end={door.end} 
+                  height={wallHeight * 0.2} 
+                  yOffset={wallHeight * 0.8}
+                  color="#e2e8f0" 
+                  thickness={wallThickness}
+                  imageDimensions={imageDimensions}
+                />
+              </React.Fragment>
             ))}
             {data.rooms?.map((room, i) => {
               const posX = (room.position.x - width / 2) * SCALE;

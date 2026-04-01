@@ -18,6 +18,7 @@ export default function App() {
   const [wallHeight, setWallHeight] = useState(3);
   const [wallThickness, setWallThickness] = useState(0.3);
   const [labelSize3D, setLabelSize3D] = useState(16);
+  const [showDoors, setShowDoors] = useState(true);
   const [bgOpacity, setBgOpacity] = useState(0.5);
   const [lineOpacity, setLineOpacity] = useState(1.0);
   const [visibility, setVisibility] = useState({
@@ -770,6 +771,24 @@ export default function App() {
                   className="w-full accent-blue-600"
                 />
               </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <label className="text-sm font-medium text-slate-700">顯示門</label>
+                <button
+                  onClick={() => setShowDoors(!showDoors)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${showDoors ? 'bg-blue-600' : 'bg-slate-300'}`}
+                >
+                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${showDoors ? 'translate-x-5' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 text-blue-800 text-xs rounded-lg border border-blue-100">
+                <p className="font-semibold mb-1">💡 提示</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>在 3D 視角中雙擊地板，可設置第一人稱的出發點。</li>
+                  <li>使用滑鼠中鍵可平移視角。</li>
+                </ul>
+              </div>
             </div>
           )}
           
@@ -859,7 +878,7 @@ export default function App() {
         )}
 
         {step === 'view3d' && data && (
-          <FloorPlan3D data={data} wallHeight={wallHeight} wallThickness={wallThickness} imageDimensions={imageDimensions} labelSize3D={labelSize3D} />
+          <FloorPlan3D data={data} wallHeight={wallHeight} wallThickness={wallThickness} imageDimensions={imageDimensions} labelSize3D={labelSize3D} showDoors={showDoors} />
         )}
 
         {/* Settings Modal */}
