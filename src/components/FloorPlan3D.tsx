@@ -73,22 +73,13 @@ function FirstPersonController({ active, startMarker }: { active: boolean, start
     rotationY.current = 0;
 
     const handleKeyDown = (e: KeyboardEvent) => { 
-      // Prevent arrow keys from scrolling or adjusting focused sliders
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'].includes(e.code)) {
-        e.preventDefault();
-      }
-      
       keys.current[e.code] = true; 
       if (e.code === 'Escape') {
         // We can't easily call setFirstPerson from here without passing it down
         // but we can dispatch a custom event or rely on the parent's state
       }
     };
-
-    // Blur any focused input/slider when entering first-person mode
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
+    const handleKeyUp = (e: KeyboardEvent) => { keys.current[e.code] = false; };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
