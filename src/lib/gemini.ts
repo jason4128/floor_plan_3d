@@ -28,7 +28,7 @@ export interface FloorPlanData {
   rooms: Room[];
 }
 
-export async function analyzeFloorPlan(base64Image: string, mimeType: string, customApiKey?: string): Promise<FloorPlanData> {
+export async function analyzeFloorPlan(base64Image: string, mimeType: string, customApiKey?: string, modelName: string = "gemini-3.1-pro-preview"): Promise<FloorPlanData> {
   const apiKey = customApiKey || process.env.GEMINI_API_KEY;
   
   if (!apiKey) {
@@ -52,7 +52,7 @@ export async function analyzeFloorPlan(base64Image: string, mimeType: string, cu
   確保座標精確反映圖面結構，牆線應盡可能相連以形成封閉空間。僅輸出 JSON。`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3.1-pro-preview",
+    model: modelName,
     contents: {
       parts: [
         {
