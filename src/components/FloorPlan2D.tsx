@@ -18,9 +18,10 @@ interface Props {
     doors: boolean;
     rooms: boolean;
   };
+  imageDimensions: { width: number, height: number } | null;
 }
 
-export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComplete, selectedItems, setSelectedItems, bgOpacity, lineOpacity, wallThickness, visibility }: Props) {
+export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComplete, selectedItems, setSelectedItems, bgOpacity, lineOpacity, wallThickness, visibility, imageDimensions }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<{ 
     type: 'wall' | 'door' | 'room', 
@@ -423,6 +424,9 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComp
   const strokeW = wallThickness / 0.02;
   const selectedStrokeW = strokeW + 4;
 
+  const width = imageDimensions?.width || 1000;
+  const height = imageDimensions?.height || 1000;
+
   return (
     <div className="w-full h-full bg-slate-200 overflow-hidden flex flex-col items-center justify-center p-8 relative">
       {/* Canvas Toolbar */}
@@ -454,7 +458,8 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComp
       </div>
 
       <div 
-        className="relative w-full max-w-4xl aspect-square bg-white shadow-2xl border border-slate-300 rounded-sm overflow-hidden"
+        className="relative w-full max-w-4xl bg-white shadow-2xl border border-slate-300 rounded-sm overflow-hidden"
+        style={{ aspectRatio: `${width} / ${height}` }}
         onWheel={handleWheel}
       >
         {/* Room Edit Modal Overlay */}
@@ -516,17 +521,9 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComp
           className="w-full h-full transition-transform duration-75 ease-out origin-top-left"
           style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}
         >
-          {imagePreview && (
-            <img 
-              src={imagePreview} 
-              alt="Floor plan background" 
-              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-              style={{ opacity: bgOpacity }}
-            />
-          )}
           <svg
             ref={svgRef}
-            viewBox="0 0 1000 1000"
+            viewBox={`0 0 ${width} ${height}`}
             className={`absolute inset-0 w-full h-full ${drawMode !== 'none' ? 'cursor-crosshair' : panToolActive ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
             style={{ zIndex: 10 }}
             onMouseDown={handleMouseDown}
@@ -535,13 +532,26 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComp
             onMouseLeave={handleMouseUp}
             onContextMenu={(e) => { e.preventDefault(); setDrawingStart(null); onDrawComplete(); }}
           >
+            {imagePreview && (
+              <image 
+                href={imagePreview} 
+                x="0"
+                y="0"
+                width={width}
+                height={height}
+                opacity={bgOpacity}
+                preserveAspectRatio="none"
+                pointerEvents="none"
+              />
+            )}
+
             {/* Grid for reference */}
             <g stroke="#e2e8f0" strokeWidth="1" opacity="0.5">
-              {Array.from({ length: 11 }).map((_, i) => (
-                <React.Fragment key={`grid-${i}`}>
-                  <line x1={i * 100} y1="0" x2={i * 100} y2="1000" />
-                  <line x1="0" y1={i * 100} x2="1000" y2={i * 100} />
-                </React.Fragment>
+              {Array.from({ length: Math.ceil(width / 100) + 1 }).map((_, i) => (
+                <line key={`grid-v-${i}`} x1={i * 100} y1="0" x2={i * 100} y2={height} />
+              ))}
+              {Array.from({ length: Math.ceil(height / 100) + 1 }).map((_, i) => (
+                <line key={`grid-h-${i}`} x1="0" y1={i * 100} x2={width} y2={i * 100} />
               ))}
             </g>
 

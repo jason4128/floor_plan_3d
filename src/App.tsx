@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, Eye, EyeOff, Settings, X, Undo2, Redo2, CheckSquare } from 'lucide-react';
+import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, Eye, EyeOff, Settings, X, Undo2, Redo2, CheckSquare, Cloud, FolderOpen } from 'lucide-react';
 import { FloorPlan3D } from './components/FloorPlan3D';
 import { FloorPlan2D } from './components/FloorPlan2D';
 import { analyzeFloorPlan, FloorPlanData } from './lib/gemini';
@@ -33,6 +33,15 @@ export default function App() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [userApiKey, setUserApiKey] = useState<string>(() => localStorage.getItem('gemini_api_key') || '');
   const [showSettings, setShowSettings] = useState(false);
+  const [showCloudProjects, setShowCloudProjects] = useState(false);
+  const [cloudProjectIdInput, setCloudProjectIdInput] = useState('');
+  const [savedProjects, setSavedProjects] = useState<{id: string, date: string}[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('saved_projects') || '[]');
+    } catch {
+      return [];
+    }
+  });
   
   // History for Undo/Redo
   const [history, setHistory] = useState<FloorPlanData[]>([]);
@@ -111,6 +120,11 @@ export default function App() {
             setFileType(project.fileType);
             setWallHeight(project.wallHeight || 3);
             setWallThickness(project.wallThickness || 0.3);
+            if (project.imageDimensions) {
+              setImageDimensions(project.imageDimensions);
+            } else {
+              setImageDimensions({ width: 1000, height: 1000 });
+            }
             setStep('edit2d');
           } else {
             alert("找不到分享的專案。");
@@ -126,6 +140,8 @@ export default function App() {
   }, []);
   const [drawMode, setDrawMode] = useState<DrawMode>('none');
   const [selectedItems, setSelectedItems] = useState<{ type: 'wall' | 'door' | 'room', index: number }[]>([]);
+
+  const [imageDimensions, setImageDimensions] = useState<{width: number, height: number} | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -150,6 +166,7 @@ export default function App() {
           const base64 = canvas.toDataURL('image/jpeg');
           setImagePreview(base64);
           setBase64Data(base64.split(',')[1]);
+          setImageDimensions({ width: canvas.width, height: canvas.height });
         }
       } catch (error) {
         console.error("PDF rendering failed:", error);
@@ -161,8 +178,14 @@ export default function App() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
-        setImagePreview(result);
-        setBase64Data(result.split(',')[1]);
+        
+        const img = new Image();
+        img.onload = () => {
+          setImageDimensions({ width: img.width, height: img.height });
+          setImagePreview(result);
+          setBase64Data(result.split(',')[1]);
+        };
+        img.src = result;
       };
       reader.readAsDataURL(file);
     }
@@ -180,6 +203,19 @@ export default function App() {
     setIsProcessing(true);
     try {
       const extractedData = await analyzeFloorPlan(base64Data, fileType, userApiKey);
+      
+      if (imageDimensions) {
+        const scaleX = imageDimensions.width / 1000;
+        const scaleY = imageDimensions.height / 1000;
+        const scalePoint = (p: {x: number, y: number}) => ({ x: p.x * scaleX, y: p.y * scaleY });
+
+        extractedData.walls = extractedData.walls.map(w => ({ start: scalePoint(w.start), end: scalePoint(w.end) }));
+        extractedData.doors = extractedData.doors.map(d => ({ start: scalePoint(d.start), end: scalePoint(d.end) }));
+        if (extractedData.rooms) {
+          extractedData.rooms = extractedData.rooms.map(r => ({ ...r, position: scalePoint(r.position) }));
+        }
+      }
+
       updateData(extractedData);
       setStep('edit2d'); // Move to 2D edit step
     } catch (error) {
@@ -223,7 +259,8 @@ export default function App() {
       base64Data,
       fileType,
       wallHeight,
-      wallThickness
+      wallThickness,
+      imageDimensions
     };
     const blob = new Blob([JSON.stringify(project)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -243,11 +280,12 @@ export default function App() {
       const projectData = {
         userId: 'anonymous',
         data,
-        imagePreview,
-        base64Data,
-        fileType,
+        imagePreview: imagePreview || null,
+        base64Data: base64Data || null,
+        fileType: fileType || null,
         wallHeight,
         wallThickness,
+        imageDimensions: imageDimensions || null,
         createdAt: serverTimestamp()
       };
       
@@ -256,9 +294,14 @@ export default function App() {
       const url = `${window.location.origin}${window.location.pathname}?p=${projectId}`;
       setShareUrl(url);
       
+      const newProject = { id: projectId, date: new Date().toISOString() };
+      const updatedProjects = [newProject, ...savedProjects].slice(0, 20); // Keep last 20
+      setSavedProjects(updatedProjects);
+      localStorage.setItem('saved_projects', JSON.stringify(updatedProjects));
+      
       // Copy to clipboard
       await navigator.clipboard.writeText(url);
-      alert(`專案已儲存並產生分享網址！網址已複製到剪貼簿：\n${url}`);
+      alert(`專案已儲存並產生分享網址！網址已複製到剪貼簿：\n${url}\n\n您也可以在「雲端專案」中找到此專案。`);
     } catch (error) {
       console.error("Error sharing project:", error);
       alert("分享失敗，請確認資料庫權限。");
@@ -281,6 +324,11 @@ export default function App() {
         setFileType(project.fileType);
         setWallHeight(project.wallHeight || 3);
         setWallThickness(project.wallThickness || 0.3);
+        if (project.imageDimensions) {
+          setImageDimensions(project.imageDimensions);
+        } else {
+          setImageDimensions({ width: 1000, height: 1000 });
+        }
         setStep('edit2d');
       } catch (error) {
         console.error("Error importing project:", error);
@@ -306,6 +354,13 @@ export default function App() {
               </p>
             </div>
             <div className="flex gap-2">
+              <button 
+                onClick={() => setShowCloudProjects(true)}
+                className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
+                title="雲端專案"
+              >
+                <Cloud className="w-4 h-4" />
+              </button>
               <button 
                 onClick={() => setShowSettings(true)}
                 className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
@@ -716,11 +771,12 @@ export default function App() {
             lineOpacity={lineOpacity}
             wallThickness={wallThickness}
             visibility={visibility}
+            imageDimensions={imageDimensions}
           />
         )}
 
         {step === 'view3d' && data && (
-          <FloorPlan3D data={data} wallHeight={wallHeight} wallThickness={wallThickness} />
+          <FloorPlan3D data={data} wallHeight={wallHeight} wallThickness={wallThickness} imageDimensions={imageDimensions} />
         )}
 
         {/* Settings Modal */}
@@ -764,6 +820,93 @@ export default function App() {
                 >
                   儲存並關閉
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Cloud Projects Modal */}
+        {showCloudProjects && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]">
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Cloud className="w-5 h-5 text-blue-600" />
+                  雲端專案
+                </h3>
+                <button 
+                  onClick={() => setShowCloudProjects(false)}
+                  className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-6 overflow-y-auto">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">開啟舊檔 (輸入專案 ID 或網址)</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      value={cloudProjectIdInput}
+                      onChange={(e) => setCloudProjectIdInput(e.target.value)}
+                      placeholder="例如: abc123xyz"
+                      className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-sm"
+                    />
+                    <button 
+                      onClick={() => {
+                        let id = cloudProjectIdInput.trim();
+                        if (id.includes('?p=')) {
+                          id = id.split('?p=')[1].split('&')[0];
+                        }
+                        if (id) {
+                          window.location.href = `${window.location.origin}${window.location.pathname}?p=${id}`;
+                        }
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                    >
+                      載入
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-slate-700 border-b pb-2">最近儲存的專案 (本機紀錄)</h4>
+                  {savedProjects.length === 0 ? (
+                    <p className="text-sm text-slate-500 italic text-center py-4">尚無儲存紀錄</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {savedProjects.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-lg hover:border-blue-200 transition-colors">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-mono font-medium text-slate-700">{p.id}</span>
+                            <span className="text-xs text-slate-500">{new Date(p.date).toLocaleString()}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => {
+                                const url = `${window.location.origin}${window.location.pathname}?p=${p.id}`;
+                                navigator.clipboard.writeText(url);
+                                alert('網址已複製！');
+                              }}
+                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                              title="複製連結"
+                            >
+                              <Share2 className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                window.location.href = `${window.location.origin}${window.location.pathname}?p=${p.id}`;
+                              }}
+                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                              title="開啟專案"
+                            >
+                              <FolderOpen className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
