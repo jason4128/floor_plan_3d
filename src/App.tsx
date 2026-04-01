@@ -128,7 +128,8 @@ export default function App() {
             } else {
               setImageDimensions({ width: 1000, height: 1000 });
             }
-            setStep('edit2d');
+            setStep('view3d');
+            setIsSidebarOpen(false);
           } else {
             alert("找不到分享的專案。");
           }
