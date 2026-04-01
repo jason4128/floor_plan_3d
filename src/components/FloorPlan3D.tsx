@@ -57,6 +57,7 @@ function FirstPersonController({ active, startMarker }: { active: boolean, start
   const keys = useRef<{ [key: string]: boolean }>({});
   const rotationY = useRef(0);
   const position = useRef(new THREE.Vector3(0, 1.6, 5));
+  const lightRef = useRef<THREE.SpotLight>(null);
 
   useEffect(() => {
     if (!active) return;
@@ -71,7 +72,13 @@ function FirstPersonController({ active, startMarker }: { active: boolean, start
     camera.rotation.set(0, 0, 0);
     rotationY.current = 0;
 
-    const handleKeyDown = (e: KeyboardEvent) => { keys.current[e.code] = true; };
+    const handleKeyDown = (e: KeyboardEvent) => { 
+      keys.current[e.code] = true; 
+      if (e.code === 'Escape') {
+        // We can't easily call setFirstPerson from here without passing it down
+        // but we can dispatch a custom event or rely on the parent's state
+      }
+    };
     const handleKeyUp = (e: KeyboardEvent) => { keys.current[e.code] = false; };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -82,13 +89,13 @@ function FirstPersonController({ active, startMarker }: { active: boolean, start
       window.removeEventListener('keyup', handleKeyUp);
       keys.current = {};
     };
-  }, [active, camera]);
+  }, [active, camera, startMarker]);
 
   useFrame((state, delta) => {
     if (!active) return;
 
     const moveSpeed = 5 * delta;
-    const turnSpeed = 2 * delta;
+    const turnSpeed = 2.5 * delta;
 
     if (keys.current['ArrowLeft'] || keys.current['KeyA']) {
       rotationY.current += turnSpeed;
@@ -112,9 +119,31 @@ function FirstPersonController({ active, startMarker }: { active: boolean, start
 
     position.current.y = 1.6; // Keep height constant
     camera.position.copy(position.current);
+
+    if (lightRef.current) {
+      lightRef.current.position.copy(camera.position);
+      const targetPos = camera.position.clone().add(direction);
+      lightRef.current.target.position.copy(targetPos);
+      lightRef.current.target.updateMatrixWorld();
+    }
   });
 
-  return null;
+  return (
+    active ? (
+      <group>
+        <spotLight
+          ref={lightRef}
+          intensity={2.5}
+          distance={25}
+          angle={0.7}
+          penumbra={0.5}
+          castShadow
+          shadow-bias={-0.0001}
+          color="#ffffff"
+        />
+      </group>
+    ) : null
+  );
 }
 
 function WallMesh({ 
@@ -154,7 +183,14 @@ function WallMesh({
   return (
     <mesh position={[posX, height / 2 + yOffset, posZ]} rotation={[0, -angle, 0]} castShadow receiveShadow>
       <boxGeometry args={[length, height, thickness]} />
-      <meshStandardMaterial color={color} transparent={transparent} opacity={opacity} roughness={0.7} metalness={0.1} />
+      <meshStandardMaterial 
+        color={color} 
+        transparent={transparent} 
+        opacity={opacity} 
+        roughness={0.4} 
+        metalness={0.2} 
+        envMapIntensity={1}
+      />
     </mesh>
   );
 }
@@ -312,21 +348,35 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
         <FirstPersonController active={firstPerson} startMarker={startMarker} />
         {firstPerson && <PlayerTracker markerRef={markerRef} dirRef={dirRef} width={width} heightDim={heightDim} />}
         
-        <ambientLight intensity={0.8} />
-        <hemisphereLight color="#ffffff" groundColor="#444444" intensity={0.6} />
+        <ambientLight intensity={0.4} />
+        <hemisphereLight color="#ffffff" groundColor="#222222" intensity={0.5} />
         <directionalLight 
-          position={[10, 20, 10]} 
-          intensity={1.2} 
+          position={[15, 25, 15]} 
+          intensity={1.5} 
           castShadow 
           shadow-mapSize-width={2048} 
           shadow-mapSize-height={2048}
-          shadow-camera-left={-40}
-          shadow-camera-right={40}
-          shadow-camera-top={40}
-          shadow-camera-bottom={-40}
-          shadow-bias={-0.0005}
+          shadow-camera-left={-50}
+          shadow-camera-right={50}
+          shadow-camera-top={50}
+          shadow-camera-bottom={-50}
+          shadow-bias={-0.0001}
         />
-        <pointLight position={[-10, 10, -10]} intensity={0.5} color="#4f46e5" />
+        <pointLight position={[-15, 15, -15]} intensity={0.8} color="#ffffff" />
+        
+        {firstPerson && (
+          <group position={startMarker ? [startMarker.x, 1.6, startMarker.z] : [0, 1.6, 5]}>
+            <spotLight
+              position={[0, 0, 0]}
+              angle={0.6}
+              penumbra={0.5}
+              intensity={2}
+              distance={20}
+              castShadow
+              shadow-bias={-0.0001}
+            />
+          </group>
+        )}
         
         <ContactShadows 
           position={[0, -0.01, 0]} 
