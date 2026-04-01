@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Grid, Html, Environment } from '@react-three/drei';
+import { OrbitControls, Grid, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { FloorPlanData } from '../lib/gemini';
 import { View, PersonStanding } from 'lucide-react';
@@ -300,11 +300,11 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
         <FirstPersonController active={firstPerson} startMarker={startMarker} />
         {firstPerson && <PlayerTracker markerRef={markerRef} dirRef={dirRef} width={width} heightDim={heightDim} />}
         
-        <ambientLight intensity={0.4} />
-        <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={0.5} />
+        <ambientLight intensity={0.7} />
+        <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={0.8} />
         <directionalLight 
           position={[20, 30, 20]} 
-          intensity={1.2} 
+          intensity={1.5} 
           castShadow 
           shadow-mapSize-width={2048} 
           shadow-mapSize-height={2048}
@@ -314,7 +314,6 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
           shadow-camera-bottom={-40}
           shadow-bias={-0.0005}
         />
-        <Environment preset="city" />
         
         {!firstPerson && (
           <OrbitControls 
