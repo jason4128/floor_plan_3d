@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Grid, Html } from '@react-three/drei';
+import { OrbitControls, Grid, Html, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { FloorPlanData } from '../lib/gemini';
 import { View, PersonStanding } from 'lucide-react';
@@ -154,7 +154,7 @@ function WallMesh({
   return (
     <mesh position={[posX, height / 2 + yOffset, posZ]} rotation={[0, -angle, 0]} castShadow receiveShadow>
       <boxGeometry args={[length, height, thickness]} />
-      <meshStandardMaterial color={color} transparent={transparent} opacity={opacity} />
+      <meshStandardMaterial color={color} transparent={transparent} opacity={opacity} roughness={0.7} metalness={0.1} />
     </mesh>
   );
 }
@@ -300,14 +300,21 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
         <FirstPersonController active={firstPerson} startMarker={startMarker} />
         {firstPerson && <PlayerTracker markerRef={markerRef} dirRef={dirRef} width={width} heightDim={heightDim} />}
         
-        <ambientLight intensity={0.6} />
+        <ambientLight intensity={0.4} />
+        <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={0.5} />
         <directionalLight 
-          position={[10, 20, 10]} 
-          intensity={1.5} 
+          position={[20, 30, 20]} 
+          intensity={1.2} 
           castShadow 
           shadow-mapSize-width={2048} 
           shadow-mapSize-height={2048}
+          shadow-camera-left={-40}
+          shadow-camera-right={40}
+          shadow-camera-top={40}
+          shadow-camera-bottom={-40}
+          shadow-bias={-0.0005}
         />
+        <Environment preset="city" />
         
         {!firstPerson && (
           <OrbitControls 
@@ -342,7 +349,7 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
           }}
         >
           <planeGeometry args={[100, 100]} />
-          <meshStandardMaterial color="#1e293b" />
+          <meshStandardMaterial color="#1e293b" roughness={0.8} metalness={0.2} />
         </mesh>
 
         {!firstPerson && startMarker && (
