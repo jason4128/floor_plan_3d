@@ -223,9 +223,19 @@ export default function App() {
 
       updateData(extractedData);
       setStep('edit2d'); // Move to 2D edit step
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error processing floor plan:", error);
-      alert(error instanceof Error ? error.message : "處理平面圖失敗，請重試。");
+      let errorMessage = "處理平面圖失敗，請重試。";
+      
+      if (error.message?.includes("503") || error.message?.includes("UNAVAILABLE")) {
+        errorMessage = "AI 伺服器目前繁忙中 (503)，請稍候幾分鐘再試一次。";
+      } else if (error.message?.includes("API Key")) {
+        errorMessage = "API Key 無效或未設定，請檢查設定。";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsProcessing(false);
     }

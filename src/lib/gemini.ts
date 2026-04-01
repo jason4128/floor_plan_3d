@@ -51,94 +51,114 @@ export async function analyzeFloorPlan(base64Image: string, mimeType: string, cu
   }
   確保座標精確反映圖面結構，牆線應盡可能相連以形成封閉空間。僅輸出 JSON。`;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: {
-      parts: [
-        {
-          inlineData: {
-            data: base64Image,
-            mimeType: mimeType,
-          },
+  let lastError: any;
+  const maxRetries = 3;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                data: base64Image,
+                mimeType: mimeType,
+              },
+            },
+            {
+              text: prompt,
+            },
+          ],
         },
-        {
-          text: prompt,
-        },
-      ],
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          walls: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                start: {
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              walls: {
+                type: Type.ARRAY,
+                items: {
                   type: Type.OBJECT,
-                  properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
-                  required: ["x", "y"],
-                },
-                end: {
-                  type: Type.OBJECT,
-                  properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
-                  required: ["x", "y"],
+                  properties: {
+                    start: {
+                      type: Type.OBJECT,
+                      properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
+                      required: ["x", "y"],
+                    },
+                    end: {
+                      type: Type.OBJECT,
+                      properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
+                      required: ["x", "y"],
+                    },
+                  },
+                  required: ["start", "end"],
                 },
               },
-              required: ["start", "end"],
-            },
-          },
-          doors: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                start: {
+              doors: {
+                type: Type.ARRAY,
+                items: {
                   type: Type.OBJECT,
-                  properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
-                  required: ["x", "y"],
-                },
-                end: {
-                  type: Type.OBJECT,
-                  properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
-                  required: ["x", "y"],
-                },
-              },
-              required: ["start", "end"],
-            },
-          },
-          rooms: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                position: {
-                  type: Type.OBJECT,
-                  properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
-                  required: ["x", "y"],
+                  properties: {
+                    start: {
+                      type: Type.OBJECT,
+                      properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
+                      required: ["x", "y"],
+                    },
+                    end: {
+                      type: Type.OBJECT,
+                      properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
+                      required: ["x", "y"],
+                    },
+                  },
+                  required: ["start", "end"],
                 },
               },
-              required: ["name", "position"],
+              rooms: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    position: {
+                      type: Type.OBJECT,
+                      properties: { x: { type: Type.NUMBER }, y: { type: Type.NUMBER } },
+                      required: ["x", "y"],
+                    },
+                  },
+                  required: ["name", "position"],
+                },
+              },
             },
+            required: ["walls", "doors", "rooms"],
           },
         },
-        required: ["walls", "doors", "rooms"],
-      },
-    },
-  });
+      });
 
-  const text = response.text;
-  if (!text) {
-    throw new Error("Failed to generate content.");
+      const text = response.text;
+      if (!text) {
+        throw new Error("Failed to generate content.");
+      }
+
+      try {
+        return JSON.parse(text) as FloorPlanData;
+      } catch (e) {
+        console.error("Failed to parse JSON:", text);
+        throw new Error("Invalid JSON response from AI.");
+      }
+    } catch (error: any) {
+      lastError = error;
+      // If it's a 503 error, retry with exponential backoff
+      if (error.message?.includes("503") || error.status === 503 || error.message?.includes("UNAVAILABLE")) {
+        const delay = Math.pow(2, attempt) * 1000;
+        console.warn(`AI API busy (503), retrying in ${delay}ms... (Attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      // For other errors, throw immediately
+      throw error;
+    }
   }
 
-  try {
-    return JSON.parse(text) as FloorPlanData;
-  } catch (e) {
-    console.error("Failed to parse JSON:", text);
-    throw new Error("Invalid JSON response from AI.");
-  }
+  throw lastError;
 }
