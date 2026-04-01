@@ -17,6 +17,7 @@ export default function App() {
   const [step, setStep] = useState<Step>('upload');
   const [wallHeight, setWallHeight] = useState(3);
   const [wallThickness, setWallThickness] = useState(0.3);
+  const [labelSize3D, setLabelSize3D] = useState(16);
   const [bgOpacity, setBgOpacity] = useState(0.5);
   const [lineOpacity, setLineOpacity] = useState(1.0);
   const [visibility, setVisibility] = useState({
@@ -698,6 +699,22 @@ export default function App() {
                   className="w-full accent-blue-600"
                 />
               </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <label className="text-sm font-medium text-slate-700">3D 標籤大小</label>
+                  <span className="text-sm text-slate-500">{labelSize3D}px</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="8" 
+                  max="48" 
+                  step="1" 
+                  value={labelSize3D}
+                  onChange={(e) => setLabelSize3D(parseInt(e.target.value))}
+                  className="w-full accent-blue-600"
+                />
+              </div>
             </div>
           )}
           
@@ -776,7 +793,7 @@ export default function App() {
         )}
 
         {step === 'view3d' && data && (
-          <FloorPlan3D data={data} wallHeight={wallHeight} wallThickness={wallThickness} imageDimensions={imageDimensions} />
+          <FloorPlan3D data={data} wallHeight={wallHeight} wallThickness={wallThickness} imageDimensions={imageDimensions} labelSize3D={labelSize3D} />
         )}
 
         {/* Settings Modal */}

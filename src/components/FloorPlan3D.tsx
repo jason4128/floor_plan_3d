@@ -10,6 +10,7 @@ interface FloorPlan3DProps {
   wallHeight: number;
   wallThickness: number;
   imageDimensions: { width: number, height: number } | null;
+  labelSize3D: number;
 }
 
 const SCALE = 0.02; // Scale down to manageable units
@@ -73,7 +74,7 @@ function WallMesh({
   );
 }
 
-export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions }: FloorPlan3DProps) {
+export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, labelSize3D }: FloorPlan3DProps) {
   const width = imageDimensions?.width || 1000;
   const heightDim = imageDimensions?.height || 1000;
   const [topDown, setTopDown] = React.useState(false);
@@ -157,7 +158,7 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions }
                   <div 
                     className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full font-bold shadow-lg border border-slate-200 whitespace-nowrap select-none"
                     style={{ 
-                      fontSize: `${room.fontSize || 12}px`,
+                      fontSize: `${labelSize3D}px`,
                       color: room.color || '#1e293b'
                     }}
                   >
