@@ -7,6 +7,7 @@ interface Props {
   onChange: (data: FloorPlanData) => void;
   imagePreview: string | null;
   drawMode: 'none' | 'wall' | 'door' | 'text';
+  doorType: 'single' | 'double';
   onDrawComplete: () => void;
   selectedItems: { type: 'wall' | 'door' | 'room', index: number }[];
   setSelectedItems: (items: { type: 'wall' | 'door' | 'room', index: number }[]) => void;
@@ -21,7 +22,7 @@ interface Props {
   imageDimensions: { width: number, height: number } | null;
 }
 
-export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComplete, selectedItems, setSelectedItems, bgOpacity, lineOpacity, wallThickness, visibility, imageDimensions }: Props) {
+export function FloorPlan2D({ data, onChange, imagePreview, drawMode, doorType, onDrawComplete, selectedItems, setSelectedItems, bgOpacity, lineOpacity, wallThickness, visibility, imageDimensions }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<{ 
     type: 'wall' | 'door' | 'room', 
@@ -124,7 +125,9 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComp
         });
 
         if (nearestWallIdx !== -1 && projection) {
-          const doorWidth = 40;
+          // SCALE is 0.02, so 1m = 50 units. 
+          // Single door: 0.9m = 45 units. Double door: 1.8m = 90 units.
+          const doorWidth = doorType === 'single' ? 45 : 90;
           const wall = data.walls[nearestWallIdx];
           const angle = Math.atan2(wall.end.y - wall.start.y, wall.end.x - wall.start.x);
           const start = {
@@ -430,27 +433,27 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComp
   return (
     <div className="w-full h-full bg-slate-200 overflow-hidden flex flex-col items-center justify-center p-8 relative">
       {/* Canvas Toolbar */}
-      <div className="absolute top-12 right-12 z-20 flex flex-col gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-xl shadow-lg border border-slate-200">
-        <button onClick={() => setScale(prev => Math.min(prev * 1.2, 10))} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600" title="放大">
+      <div className="absolute top-6 right-6 z-20 flex flex-col gap-3 ios-glass p-2 rounded-2xl shadow-xl border border-white/20">
+        <button onClick={() => setScale(prev => Math.min(prev * 1.2, 10))} className="p-2 hover:bg-black/5 rounded-xl transition-colors text-slate-600" title="放大">
           <ZoomIn className="w-5 h-5" />
         </button>
-        <button onClick={() => setScale(prev => Math.max(prev / 1.2, 0.5))} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600" title="縮小">
+        <button onClick={() => setScale(prev => Math.max(prev / 1.2, 0.5))} className="p-2 hover:bg-black/5 rounded-xl transition-colors text-slate-600" title="縮小">
           <ZoomOut className="w-5 h-5" />
         </button>
-        <button onClick={resetView} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600" title="重置視角">
+        <button onClick={resetView} className="p-2 hover:bg-black/5 rounded-xl transition-colors text-slate-600" title="重置視角">
           <Maximize className="w-5 h-5" />
         </button>
-        <div className="h-px bg-slate-200 mx-1 my-1" />
+        <div className="h-px bg-black/10 mx-1 my-1" />
         <button 
           onClick={() => { setPanToolActive(!panToolActive); onDrawComplete(); setDrawingStart(null); }} 
-          className={`p-2 rounded-lg transition-colors ${panToolActive ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-600'}`} 
+          className={`p-2 rounded-xl transition-colors ${panToolActive ? 'bg-ios-blue text-white' : 'hover:bg-black/5 text-slate-600'}`} 
           title="平移工具"
         >
           <Hand className="w-5 h-5" />
         </button>
         <button 
           onClick={() => { setPanToolActive(false); setDrawingStart(null); }} 
-          className={`p-2 rounded-lg transition-colors ${!panToolActive && drawMode === 'none' ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-600'}`} 
+          className={`p-2 rounded-xl transition-colors ${!panToolActive && drawMode === 'none' ? 'bg-ios-blue text-white' : 'hover:bg-black/5 text-slate-600'}`} 
           title="選取工具"
         >
           <MousePointer2 className="w-5 h-5" />
@@ -465,50 +468,51 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComp
         {/* Room Edit Modal Overlay */}
         {editingRoom && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-            <div className="bg-white p-6 rounded-2xl shadow-2xl border border-slate-200 w-80 space-y-4">
-              <h3 className="font-bold text-slate-800 border-b pb-2">編輯空間屬性</h3>
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">空間名稱</label>
+            <div className="ios-card p-6 w-80 space-y-5 shadow-2xl">
+              <h3 className="text-lg font-bold text-slate-800 text-center">編輯空間屬性</h3>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">空間名稱</label>
                   <input 
                     type="text" 
                     value={editingRoom.name} 
                     onChange={(e) => setEditingRoom({...editingRoom, name: e.target.value})}
-                    className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="ios-input"
+                    placeholder="例如：客廳"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">字體大小 (px)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">字體大小 (px)</label>
                   <input 
                     type="number" 
                     value={editingRoom.fontSize} 
                     onChange={(e) => setEditingRoom({...editingRoom, fontSize: parseInt(e.target.value) || 12})}
-                    className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="ios-input"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500 uppercase">文字顏色</label>
-                  <div className="flex gap-2 items-center">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">文字顏色</label>
+                  <div className="flex gap-3 items-center ios-input">
                     <input 
                       type="color" 
                       value={editingRoom.color} 
                       onChange={(e) => setEditingRoom({...editingRoom, color: e.target.value})}
-                      className="w-10 h-10 p-0 border-0 rounded cursor-pointer"
+                      className="w-6 h-6 p-0 border-0 rounded-full cursor-pointer overflow-hidden"
                     />
                     <span className="text-sm font-mono text-slate-600">{editingRoom.color}</span>
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-3 pt-2">
                 <button 
                   onClick={() => setEditingRoom(null)}
-                  className="flex-1 py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+                  className="ios-button-secondary flex-1 py-3"
                 >
                   取消
                 </button>
                 <button 
                   onClick={saveRoomEdit}
-                  className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  className="ios-button-primary flex-1 py-3"
                 >
                   儲存
                 </button>
@@ -705,12 +709,12 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, onDrawComp
         </div>
       </div>
       
-      <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500 bg-white/50 px-4 py-2 rounded-full border border-slate-200">
-        <span className="flex items-center gap-1"><kbd className="bg-white px-1 rounded border shadow-sm">滾輪</kbd> 縮放</span>
-        <span className="flex items-center gap-1"><kbd className="bg-white px-1 rounded border shadow-sm">中鍵/拖曳</kbd> 平移</span>
-        <span className="flex items-center gap-1"><kbd className="bg-white px-1 rounded border shadow-sm">Shift</kbd> 正交/多選</span>
-        <span className="flex items-center gap-1"><kbd className="bg-white px-1 rounded border shadow-sm">右鍵</kbd> 結束繪製</span>
-        <span className="flex items-center gap-1"><kbd className="bg-white px-1 rounded border shadow-sm">雙擊文字</kbd> 編輯名稱</span>
+      <div className="mt-6 flex flex-wrap justify-center gap-4 text-[10px] text-slate-400 font-bold uppercase tracking-widest ios-glass px-6 py-3 rounded-full border border-white/20 shadow-sm">
+        <span className="flex items-center gap-2"><kbd className="bg-white/80 px-1.5 py-0.5 rounded border shadow-sm text-slate-600">滾輪</kbd> 縮放</span>
+        <span className="flex items-center gap-2"><kbd className="bg-white/80 px-1.5 py-0.5 rounded border shadow-sm text-slate-600">中鍵/拖曳</kbd> 平移</span>
+        <span className="flex items-center gap-2"><kbd className="bg-white/80 px-1.5 py-0.5 rounded border shadow-sm text-slate-600">Shift</kbd> 正交/多選</span>
+        <span className="flex items-center gap-2"><kbd className="bg-white/80 px-1.5 py-0.5 rounded border shadow-sm text-slate-600">右鍵</kbd> 結束繪製</span>
+        <span className="flex items-center gap-2"><kbd className="bg-white/80 px-1.5 py-0.5 rounded border shadow-sm text-slate-600">雙擊文字</kbd> 編輯</span>
       </div>
     </div>
   );

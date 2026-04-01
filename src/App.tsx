@@ -15,7 +15,7 @@ type DrawMode = 'none' | 'wall' | 'door' | 'text';
 
 export default function App() {
   const [step, setStep] = useState<Step>('upload');
-  const [wallHeight, setWallHeight] = useState(3);
+  const [wallHeight, setWallHeight] = useState(2.3);
   const [wallThickness, setWallThickness] = useState(0.3);
   const [labelSize3D, setLabelSize3D] = useState(16);
   const [showDoors, setShowDoors] = useState(true);
@@ -143,6 +143,7 @@ export default function App() {
     }
   }, []);
   const [drawMode, setDrawMode] = useState<DrawMode>('none');
+  const [doorType, setDoorType] = useState<'single' | 'double'>('single');
   const [selectedItems, setSelectedItems] = useState<{ type: 'wall' | 'door' | 'room', index: number }[]>([]);
 
   const [imageDimensions, setImageDimensions] = useState<{width: number, height: number} | null>(null);
@@ -396,19 +397,19 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 text-slate-900 overflow-hidden">
+    <div className="flex h-screen w-full bg-[#F2F2F7] text-black overflow-hidden font-sans">
       {/* Left Panel: Controls */}
-      <div className={`relative flex-shrink-0 transition-all duration-300 ${isSidebarOpen ? 'w-80' : 'w-0'} bg-white z-20`}>
-        <div className={`absolute inset-0 w-80 bg-white border-r border-slate-200 shadow-sm flex flex-col overflow-hidden transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="p-6 border-b border-slate-100">
+      <div className={`relative flex-shrink-0 transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${isSidebarOpen ? 'w-[320px]' : 'w-0'} z-20`}>
+        <div className={`absolute inset-0 w-[320px] bg-white/80 backdrop-blur-xl border-r border-slate-200/50 flex flex-col overflow-hidden transition-transform duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="p-6 pt-10">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <ImageIcon className="w-6 h-6 text-blue-600" />
-                  工程平面圖(3D平面轉換)
+                <h1 className="text-2xl font-bold tracking-tight text-black flex items-center gap-2">
+                  <ImageIcon className="w-6 h-6 text-ios-blue" />
+                  工程平面圖
                 </h1>
-                <p className="text-sm text-slate-500 mt-1">
-                  將 2D 平面圖轉換為 3D 模型。
+                <p className="text-[13px] font-medium text-ios-gray mt-1">
+                  3D 平面轉換工具
                 </p>
               </div>
               <div className="flex gap-2">
@@ -433,13 +434,13 @@ export default function App() {
           <div className="p-6 flex-1 overflow-y-auto flex flex-col gap-6">
             {/* Step 1: Upload */}
             <div className={`space-y-3 ${step !== 'upload' ? 'opacity-50' : ''}`}>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-              <Upload className="w-4 h-4" /> 1. 上傳平面圖
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.05em] text-ios-gray flex items-center gap-2 px-1">
+              <Upload className="w-3.5 h-3.5" /> 1. 上傳平面圖
             </h2>
             {step === 'upload' ? (
               <div className="space-y-4">
                 <div 
-                  className="border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 hover:border-blue-400 transition-colors"
+                  className="ios-card p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-all border-dashed border-2 border-slate-200"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <input 
@@ -449,11 +450,11 @@ export default function App() {
                     accept="image/jpeg,image/png,image/webp,application/pdf"
                     onChange={handleFileUpload}
                   />
-                  <Upload className="w-8 h-8 text-slate-400 mb-2" />
-                  <span className="text-sm font-medium text-slate-700">
+                  <Upload className="w-8 h-8 text-ios-blue mb-2" />
+                  <span className="text-sm font-semibold text-slate-700">
                     {imagePreview ? '重新上傳' : '點擊上傳'}
                   </span>
-                  <span className="text-xs text-slate-500 mt-1">支援 JPG, PNG, WEBP 或 PDF</span>
+                  <span className="text-[11px] text-ios-gray mt-1">支援 JPG, PNG, WEBP 或 PDF</span>
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -461,7 +462,7 @@ export default function App() {
                     <button 
                       onClick={handleAnalyze}
                       disabled={isProcessing}
-                      className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center justify-center gap-2"
+                      className="ios-button-primary w-full flex items-center justify-center gap-2 shadow-md shadow-ios-blue/20"
                     >
                       {isProcessing ? (
                         <>
@@ -481,14 +482,14 @@ export default function App() {
                       setData({ walls: [], doors: [], rooms: [] });
                       setStep('edit2d');
                     }}
-                    className="w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    className="ios-button-secondary w-full flex items-center justify-center gap-2"
                   >
                     <Plus className="w-4 h-4" /> 直接手繪平面圖
                   </button>
                   
                   <button 
                     onClick={() => importInputRef.current?.click()}
-                    className="w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    className="ios-button-secondary w-full flex items-center justify-center gap-2"
                   >
                     <FileJson className="w-4 h-4" /> 匯入專案 (.json)
                     <input 
@@ -505,20 +506,20 @@ export default function App() {
               <div className="flex flex-col gap-2">
                 <button 
                   onClick={() => { setStep('upload'); setData(null); setImagePreview(null); setBase64Data(null); }}
-                  className="w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+                  className="ios-button-secondary w-full"
                 >
                   上傳新平面圖
                 </button>
                 <button 
                   onClick={handleDownloadProject}
-                  className="w-full py-2 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-blue-100"
+                  className="ios-button-secondary w-full flex items-center justify-center gap-2 text-ios-blue"
                 >
                   <Download className="w-4 h-4" /> 下載專案檔
                 </button>
                 <button 
                   onClick={handleShare}
                   disabled={isSaving}
-                  className="w-full py-2 px-4 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-green-100 disabled:opacity-50"
+                  className="ios-button-secondary w-full flex items-center justify-center gap-2 text-green-600 border-green-100 bg-green-50/30"
                 >
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
                   分享專案
@@ -530,49 +531,67 @@ export default function App() {
           {/* Step 2: 2D Edit */}
           {data && (
             <div className={`space-y-4 ${step === 'view3d' ? 'opacity-50' : ''}`}>
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                <Edit3 className="w-4 h-4" /> 2. 確認與編輯
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.05em] text-ios-gray flex items-center gap-2 px-1">
+                <Edit3 className="w-3.5 h-3.5" /> 2. 確認與編輯
               </h2>
               
               {step === 'edit2d' ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-2">
                     <button 
                       onClick={() => setDrawMode('none')}
-                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${drawMode === 'none' ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium transition-all ${drawMode === 'none' ? 'bg-ios-blue text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}
                     >
                       <MousePointer2 className="w-4 h-4" /> 選取
                     </button>
                     <button 
                       onClick={handleDeleteSelected}
                       disabled={selectedItems.length === 0}
-                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium bg-slate-50 text-red-600 border border-slate-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium bg-white text-red-500 border border-slate-200 active:bg-red-50 disabled:opacity-30 transition-all"
                     >
                       <Trash2 className="w-4 h-4" /> 刪除
                     </button>
                     <button 
                       onClick={() => setDrawMode('wall')}
-                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${drawMode === 'wall' ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium transition-all ${drawMode === 'wall' ? 'bg-ios-blue text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}
                     >
                       <Plus className="w-4 h-4" /> 牆壁
                     </button>
                     <button 
                       onClick={() => setDrawMode('door')}
-                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${drawMode === 'door' ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium transition-all ${drawMode === 'door' ? 'bg-ios-blue text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}
                     >
                       <Plus className="w-4 h-4" /> 門
                     </button>
                     <button 
                       onClick={() => setDrawMode('text')}
-                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${drawMode === 'text' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'}`}
+                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium transition-all ${drawMode === 'text' ? 'bg-ios-blue text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}
                     >
                       <Plus className="w-4 h-4" /> 文字
                     </button>
+                    
+                    {drawMode === 'door' && (
+                      <div className="col-span-2 flex gap-1 bg-slate-100 p-1 rounded-[10px]">
+                        <button
+                          onClick={() => setDoorType('single')}
+                          className={`flex-1 py-1.5 px-2 rounded-[8px] text-[11px] font-semibold transition-all ${doorType === 'single' ? 'bg-white text-ios-blue shadow-sm' : 'text-ios-gray hover:text-slate-700'}`}
+                        >
+                          單開門 (90cm)
+                        </button>
+                        <button
+                          onClick={() => setDoorType('double')}
+                          className={`flex-1 py-1.5 px-2 rounded-[8px] text-[11px] font-semibold transition-all ${doorType === 'double' ? 'bg-white text-ios-blue shadow-sm' : 'text-ios-gray hover:text-slate-700'}`}
+                        >
+                          雙開門 (180cm)
+                        </button>
+                      </div>
+                    )}
+
                     <div className="flex gap-1 col-span-2">
                       <button 
                         onClick={handleUndo}
                         disabled={historyIndex <= 0}
-                        className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 disabled:opacity-50 transition-colors"
+                        className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium bg-white text-slate-600 border border-slate-200 active:bg-slate-50 disabled:opacity-30 transition-all"
                         title="復原 (Ctrl+Z)"
                       >
                         <Undo2 className="w-4 h-4" />
@@ -580,111 +599,109 @@ export default function App() {
                       <button 
                         onClick={handleRedo}
                         disabled={historyIndex >= history.length - 1}
-                        className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 disabled:opacity-50 transition-colors"
+                        className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium bg-white text-slate-600 border border-slate-200 active:bg-slate-50 disabled:opacity-30 transition-all"
                         title="重做 (Ctrl+Shift+Z)"
                       >
                         <Redo2 className="w-4 h-4" />
                       </button>
                     </div>
                     
-                    <div className="col-span-2 space-y-1">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase px-1">全選</p>
-                      <div className="grid grid-cols-3 gap-1">
+                    <div className="col-span-2 space-y-1.5">
+                      <p className="text-[10px] font-bold text-ios-gray uppercase px-1 tracking-wider">全選</p>
+                      <div className="grid grid-cols-3 gap-1.5">
                         <button 
                           onClick={() => setSelectedItems(data.walls.map((_, i) => ({ type: 'wall', index: i })))}
-                          className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[10px] font-bold bg-slate-50 text-slate-600 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
+                          className="flex items-center justify-center gap-1 py-2 px-2 rounded-[10px] text-[10px] font-bold bg-white text-slate-600 border border-slate-200 active:bg-ios-blue/5 active:text-ios-blue transition-all"
                         >
-                          <CheckSquare className="w-3 h-3" /> 牆面
+                          牆面
                         </button>
                         <button 
                           onClick={() => setSelectedItems(data.doors.map((_, i) => ({ type: 'door', index: i })))}
-                          className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[10px] font-bold bg-slate-50 text-slate-600 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                          className="flex items-center justify-center gap-1 py-2 px-2 rounded-[10px] text-[10px] font-bold bg-white text-slate-600 border border-slate-200 active:bg-ios-blue/5 active:text-ios-blue transition-all"
                         >
-                          <CheckSquare className="w-3 h-3" /> 門
+                          門
                         </button>
                         <button 
                           onClick={() => setSelectedItems((data.rooms || []).map((_, i) => ({ type: 'room', index: i })))}
-                          className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[10px] font-bold bg-slate-50 text-slate-600 border border-slate-200 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 transition-colors"
+                          className="flex items-center justify-center gap-1 py-2 px-2 rounded-[10px] text-[10px] font-bold bg-white text-slate-600 border border-slate-200 active:bg-ios-blue/5 active:text-ios-blue transition-all"
                         >
-                          <CheckSquare className="w-3 h-3" /> 文字
+                          文字
                         </button>
                       </div>
                     </div>
 
                     <button 
                       onClick={handleClearAll}
-                      className="col-span-2 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 transition-colors"
+                      className="col-span-2 flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium bg-white text-red-500 border border-red-100 active:bg-red-50 transition-all"
                     >
                       <Trash2 className="w-4 h-4" /> 一鍵清除所有
                     </button>
                   </div>
 
-                  <div className="space-y-2 pt-2">
-                    <div className="flex justify-between">
-                      <label className="text-sm font-medium text-slate-700">牆面厚度</label>
-                      <span className="text-sm text-slate-500">{wallThickness.toFixed(2)}m</span>
+                  <div className="ios-card p-4 space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-semibold text-slate-700">牆面厚度</label>
+                        <span className="text-xs font-mono text-ios-gray bg-slate-100 px-1.5 py-0.5 rounded">{wallThickness.toFixed(2)}m</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0.1" 
+                        max="1.0" 
+                        step="0.05" 
+                        value={wallThickness}
+                        onChange={(e) => setWallThickness(parseFloat(e.target.value))}
+                        className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-ios-blue"
+                      />
                     </div>
-                    <input 
-                      type="range" 
-                      min="0.1" 
-                      max="1.0" 
-                      step="0.05" 
-                      value={wallThickness}
-                      onChange={(e) => setWallThickness(parseFloat(e.target.value))}
-                      className="w-full accent-blue-600"
-                    />
-                  </div>
 
-                  <div className="space-y-2 pt-2">
-                    <div className="flex justify-between">
-                      <label className="text-sm font-medium text-slate-700">線條透明度</label>
-                      <span className="text-sm text-slate-500">{Math.round(lineOpacity * 100)}%</span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-semibold text-slate-700">線條透明度</label>
+                        <span className="text-xs font-mono text-ios-gray bg-slate-100 px-1.5 py-0.5 rounded">{Math.round(lineOpacity * 100)}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0.1" 
+                        max="1" 
+                        step="0.05" 
+                        value={lineOpacity}
+                        onChange={(e) => setLineOpacity(parseFloat(e.target.value))}
+                        className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-ios-blue"
+                      />
                     </div>
-                    <input 
-                      type="range" 
-                      min="0.1" 
-                      max="1" 
-                      step="0.05" 
-                      value={lineOpacity}
-                      onChange={(e) => setLineOpacity(parseFloat(e.target.value))}
-                      className="w-full accent-blue-600"
-                    />
-                  </div>
 
-                  <div className="space-y-4 pt-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                        <SlidersHorizontal className="w-4 h-4" /> 圖層顯示
-                      </h3>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button 
-                        onClick={() => setVisibility({...visibility, walls: !visibility.walls})}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border transition-all ${visibility.walls ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-400'}`}
-                      >
-                        {visibility.walls ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                        <span className="text-[10px] font-bold">牆面</span>
-                      </button>
-                      <button 
-                        onClick={() => setVisibility({...visibility, doors: !visibility.doors})}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border transition-all ${visibility.doors ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-400'}`}
-                      >
-                        {visibility.doors ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                        <span className="text-[10px] font-bold">門</span>
-                      </button>
-                      <button 
-                        onClick={() => setVisibility({...visibility, rooms: !visibility.rooms})}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border transition-all ${visibility.rooms ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-400'}`}
-                      >
-                        {visibility.rooms ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                        <span className="text-[10px] font-bold">文字</span>
-                      </button>
+                    <div className="space-y-3 pt-2 border-t border-slate-50">
+                      <h3 className="text-[11px] font-bold text-ios-gray uppercase tracking-wider">圖層顯示</h3>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button 
+                          onClick={() => setVisibility({...visibility, walls: !visibility.walls})}
+                          className={`flex flex-col items-center gap-1 p-2 rounded-[12px] border transition-all ${visibility.walls ? 'bg-ios-blue/5 border-ios-blue/20 text-ios-blue' : 'bg-slate-50 border-slate-100 text-ios-gray'}`}
+                        >
+                          {visibility.walls ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                          <span className="text-[10px] font-bold">牆面</span>
+                        </button>
+                        <button 
+                          onClick={() => setVisibility({...visibility, doors: !visibility.doors})}
+                          className={`flex flex-col items-center gap-1 p-2 rounded-[12px] border transition-all ${visibility.doors ? 'bg-ios-blue/5 border-ios-blue/20 text-ios-blue' : 'bg-slate-50 border-slate-100 text-ios-gray'}`}
+                        >
+                          {visibility.doors ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                          <span className="text-[10px] font-bold">門</span>
+                        </button>
+                        <button 
+                          onClick={() => setVisibility({...visibility, rooms: !visibility.rooms})}
+                          className={`flex flex-col items-center gap-1 p-2 rounded-[12px] border transition-all ${visibility.rooms ? 'bg-ios-blue/5 border-ios-blue/20 text-ios-blue' : 'bg-slate-50 border-slate-100 text-ios-gray'}`}
+                        >
+                          {visibility.rooms ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                          <span className="text-[10px] font-bold">文字</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="space-y-2 pt-2">
-                      <div className="flex justify-between">
-                        <label className="text-sm font-medium text-slate-700">底圖透明度</label>
-                        <span className="text-sm text-slate-500">{Math.round(bgOpacity * 100)}%</span>
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-semibold text-slate-700">底圖透明度</label>
+                        <span className="text-xs font-mono text-ios-gray bg-slate-100 px-1.5 py-0.5 rounded">{Math.round(bgOpacity * 100)}%</span>
                       </div>
                       <input 
                         type="range" 
@@ -693,7 +710,7 @@ export default function App() {
                         step="0.05" 
                         value={bgOpacity}
                         onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
-                        className="w-full accent-blue-600"
+                        className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-ios-blue"
                       />
                     </div>
                   </div>
@@ -701,7 +718,7 @@ export default function App() {
                   <div className="pt-2">
                     <button 
                       onClick={() => setStep('view3d')}
-                      className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center justify-center gap-2"
+                      className="ios-button-primary w-full flex items-center justify-center gap-2 py-3 shadow-lg shadow-ios-blue/25"
                     >
                       <Box className="w-5 h-5" /> 生成 3D 視圖
                     </button>
@@ -710,7 +727,7 @@ export default function App() {
               ) : (
                 <button 
                   onClick={() => setStep('edit2d')}
-                  className="w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+                  className="ios-button-secondary w-full"
                 >
                   返回 2D 編輯器
                 </button>
@@ -721,71 +738,75 @@ export default function App() {
           {/* Step 3: 3D Controls */}
           {step === 'view3d' && (
             <div className="space-y-4">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4" /> 3. 3D 控制
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.05em] text-ios-gray flex items-center gap-2 px-1">
+                <SlidersHorizontal className="w-3.5 h-3.5" /> 3. 3D 控制
               </h2>
               
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <label className="text-sm font-medium text-slate-700">牆面高度</label>
-                  <span className="text-sm text-slate-500">{wallHeight.toFixed(1)}m</span>
+              <div className="ios-card p-4 space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-semibold text-slate-700">牆面高度</label>
+                    <span className="text-xs font-mono text-ios-gray bg-slate-100 px-1.5 py-0.5 rounded">{wallHeight.toFixed(1)}m</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="2.1" 
+                    max="6" 
+                    step="0.1" 
+                    value={wallHeight}
+                    onChange={(e) => setWallHeight(parseFloat(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-ios-blue"
+                  />
                 </div>
-                <input 
-                  type="range" 
-                  min="1" 
-                  max="6" 
-                  step="0.1" 
-                  value={wallHeight}
-                  onChange={(e) => setWallHeight(parseFloat(e.target.value))}
-                  className="w-full accent-blue-600"
-                />
-              </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <label className="text-sm font-medium text-slate-700">牆面厚度</label>
-                  <span className="text-sm text-slate-500">{wallThickness.toFixed(2)}m</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-semibold text-slate-700">牆面厚度</label>
+                    <span className="text-xs font-mono text-ios-gray bg-slate-100 px-1.5 py-0.5 rounded">{wallThickness.toFixed(2)}m</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0.1" 
+                    max="1.0" 
+                    step="0.05" 
+                    value={wallThickness}
+                    onChange={(e) => setWallThickness(parseFloat(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-ios-blue"
+                  />
                 </div>
-                <input 
-                  type="range" 
-                  min="0.1" 
-                  max="1.0" 
-                  step="0.05" 
-                  value={wallThickness}
-                  onChange={(e) => setWallThickness(parseFloat(e.target.value))}
-                  className="w-full accent-blue-600"
-                />
-              </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <label className="text-sm font-medium text-slate-700">3D 標籤大小</label>
-                  <span className="text-sm text-slate-500">{labelSize3D}px</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-semibold text-slate-700">3D 標籤大小</label>
+                    <span className="text-xs font-mono text-ios-gray bg-slate-100 px-1.5 py-0.5 rounded">{labelSize3D}px</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="8" 
+                    max="48" 
+                    step="1" 
+                    value={labelSize3D}
+                    onChange={(e) => setLabelSize3D(parseInt(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-ios-blue"
+                  />
                 </div>
-                <input 
-                  type="range" 
-                  min="8" 
-                  max="48" 
-                  step="1" 
-                  value={labelSize3D}
-                  onChange={(e) => setLabelSize3D(parseInt(e.target.value))}
-                  className="w-full accent-blue-600"
-                />
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                  <label className="text-xs font-semibold text-slate-700">顯示門</label>
+                  <button
+                    onClick={() => setShowDoors(!showDoors)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showDoors ? 'bg-ios-blue' : 'bg-slate-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${showDoors ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <label className="text-sm font-medium text-slate-700">顯示門</label>
-                <button
-                  onClick={() => setShowDoors(!showDoors)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${showDoors ? 'bg-blue-600' : 'bg-slate-300'}`}
-                >
-                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${showDoors ? 'translate-x-5' : 'translate-x-1'}`} />
-                </button>
-              </div>
-
-              <div className="mt-4 p-3 bg-blue-50 text-blue-800 text-xs rounded-lg border border-blue-100">
-                <p className="font-semibold mb-1">💡 提示</p>
-                <ul className="list-disc pl-4 space-y-1">
+              <div className="p-3 bg-ios-blue/5 text-ios-blue text-[11px] rounded-[12px] border border-ios-blue/10 leading-relaxed">
+                <p className="font-bold mb-1 flex items-center gap-1">
+                  <Box className="w-3 h-3" /> 使用提示
+                </p>
+                <ul className="list-disc pl-4 space-y-1 opacity-80">
                   <li>在 3D 視角中雙擊地板，可設置第一人稱的出發點。</li>
                   <li>使用滑鼠中鍵可平移視角。</li>
                 </ul>
@@ -797,17 +818,17 @@ export default function App() {
           {data && (
             <div className="space-y-3 pt-4 border-t border-slate-100 mt-auto">
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  <div className="text-xl font-bold text-slate-700">{data.walls.length}</div>
-                  <div className="text-xs text-slate-500">牆壁</div>
+                <div className="ios-card py-2 px-1">
+                  <div className="text-lg font-bold text-slate-800">{data.walls.length}</div>
+                  <div className="text-[9px] font-bold text-ios-gray uppercase tracking-wider">牆壁</div>
                 </div>
-                <div className="bg-red-50 p-2 rounded-lg border border-red-100">
-                  <div className="text-xl font-bold text-red-700">{data.doors.length}</div>
-                  <div className="text-xs text-red-500">門</div>
+                <div className="ios-card py-2 px-1">
+                  <div className="text-lg font-bold text-red-500">{data.doors.length}</div>
+                  <div className="text-[9px] font-bold text-ios-gray uppercase tracking-wider">門</div>
                 </div>
-                <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
-                  <div className="text-xl font-bold text-blue-700">{data.rooms?.length || 0}</div>
-                  <div className="text-xs text-blue-500">空間</div>
+                <div className="ios-card py-2 px-1">
+                  <div className="text-lg font-bold text-ios-blue">{data.rooms?.length || 0}</div>
+                  <div className="text-[9px] font-bold text-ios-gray uppercase tracking-wider">空間</div>
                 </div>
               </div>
             </div>
@@ -819,7 +840,7 @@ export default function App() {
       {/* Sidebar Toggle Button */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className={`absolute top-1/2 -translate-y-1/2 z-30 bg-white border border-slate-200 shadow-md rounded-full p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition-all duration-300 flex items-center justify-center`}
+        className={`absolute top-1/2 -translate-y-1/2 z-30 ios-glass border border-white/20 shadow-xl rounded-full p-2 text-slate-500 hover:text-ios-blue transition-all duration-300 flex items-center justify-center`}
         style={{ left: isSidebarOpen ? '304px' : '0px', transform: isSidebarOpen ? 'translateY(-50%)' : 'translate(16px, -50%)' }}
         title={isSidebarOpen ? "隱藏側邊欄" : "顯示側邊欄"}
       >
@@ -829,34 +850,37 @@ export default function App() {
       {/* Right Panel: Viewport */}
       <div className="flex-1 relative bg-slate-900">
         {step === 'upload' && (
-          <div className="absolute inset-0 flex items-center justify-center text-slate-500 flex-col gap-4 bg-slate-50 p-8">
+          <div className="absolute inset-0 flex items-center justify-center text-slate-500 flex-col gap-6 bg-ios-bg p-8">
             {imagePreview ? (
               <div className="relative w-full h-full flex items-center justify-center">
                 {fileType === 'application/pdf' ? (
-                  <div className="flex flex-col items-center gap-4 text-slate-400">
-                    <div className="w-32 h-40 bg-slate-100 border-2 border-slate-200 rounded-lg flex items-center justify-center shadow-sm">
-                      <span className="text-xl font-bold text-slate-300 uppercase">PDF</span>
+                  <div className="flex flex-col items-center gap-6">
+                    <div className="w-40 h-52 ios-card flex items-center justify-center shadow-2xl border-white/40">
+                      <span className="text-3xl font-bold text-slate-300 uppercase tracking-widest">PDF</span>
                     </div>
-                    <p className="text-sm font-medium text-slate-500">PDF 文件已上傳，點擊「分析牆面」開始</p>
+                    <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">PDF 文件已就緒</p>
                   </div>
                 ) : (
                   <img 
                     src={imagePreview} 
                     alt="Preview" 
-                    className="max-w-full max-h-full object-contain shadow-lg rounded-sm"
+                    className="max-w-full max-h-full object-contain shadow-2xl rounded-2xl border-4 border-white/20"
                   />
                 )}
-                <div className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-slate-600 border border-slate-200 shadow-sm">
-                  預覽模式
+                <div className="absolute top-6 left-6 ios-glass px-4 py-1.5 rounded-full text-[10px] font-bold text-ios-blue uppercase tracking-widest border border-white/20 shadow-sm">
+                  Preview Mode
                 </div>
               </div>
             ) : (
-              <>
-                <div className="w-24 h-24 border-4 border-dashed border-slate-300 rounded-full flex items-center justify-center">
-                  <ImageIcon className="w-8 h-8 text-slate-400" />
+              <div className="flex flex-col items-center gap-6">
+                <div className="w-32 h-32 ios-glass rounded-full flex items-center justify-center shadow-2xl border-white/20">
+                  <ImageIcon className="w-10 h-10 text-ios-blue/40" />
                 </div>
-                <p className="text-lg font-medium text-slate-600">請上傳平面圖以開始</p>
-              </>
+                <div className="text-center space-y-2">
+                  <p className="text-xl font-bold text-slate-800">開始您的工程平面圖</p>
+                  <p className="text-sm font-medium text-slate-400">請在左側上傳圖片或 PDF 文件</p>
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -867,6 +891,7 @@ export default function App() {
             onChange={(newData) => updateData(newData)} 
             imagePreview={imagePreview}
             drawMode={drawMode}
+            doorType={doorType}
             onDrawComplete={() => setDrawMode('none')}
             selectedItems={selectedItems}
             setSelectedItems={setSelectedItems}
@@ -884,23 +909,23 @@ export default function App() {
 
         {/* Settings Modal */}
         {showSettings && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+            <div className="ios-card w-full max-w-md shadow-2xl overflow-hidden border-white/40">
+              <div className="p-6 border-b border-black/5 flex justify-between items-center bg-white/50">
                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-blue-600" />
+                  <Settings className="w-5 h-5 text-ios-blue" />
                   API 設定
                 </h3>
                 <button 
                   onClick={() => setShowSettings(false)}
-                  className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+                  className="p-2 hover:bg-black/5 rounded-full text-slate-400 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="p-6 space-y-5">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Gemini API Key</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Gemini API Key</label>
                   <input 
                     type="password"
                     value={userApiKey}
@@ -910,16 +935,15 @@ export default function App() {
                       localStorage.setItem('gemini_api_key', val);
                     }}
                     placeholder="輸入您的 API Key..."
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-mono"
+                    className="ios-input font-mono"
                   />
-                  <p className="text-xs text-slate-500 leading-relaxed">
+                  <p className="text-[11px] text-slate-400 leading-relaxed px-1">
                     此金鑰將儲存在您的瀏覽器中，用於 AI 分析平面圖。
-                    如果您在 GitHub Pages 上使用，請務必在此設定金鑰。
                   </p>
                 </div>
                 <button 
                   onClick={() => setShowSettings(false)}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-200"
+                  className="ios-button-primary w-full py-4 text-base"
                 >
                   儲存並關閉
                 </button>
@@ -929,30 +953,30 @@ export default function App() {
         )}
         {/* Cloud Projects Modal */}
         {showCloudProjects && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+            <div className="ios-card w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[80vh] border-white/40">
+              <div className="p-6 border-b border-black/5 flex justify-between items-center bg-white/50">
                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <Cloud className="w-5 h-5 text-blue-600" />
+                  <Cloud className="w-5 h-5 text-ios-blue" />
                   雲端專案
                 </h3>
                 <button 
                   onClick={() => setShowCloudProjects(false)}
-                  className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+                  className="p-2 hover:bg-black/5 rounded-full text-slate-400 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="p-6 space-y-6 overflow-y-auto">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">開啟舊檔 (輸入專案 ID 或網址)</label>
-                  <div className="flex gap-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">開啟舊檔 (輸入專案 ID 或網址)</label>
+                  <div className="flex gap-3">
                     <input 
                       type="text"
                       value={cloudProjectIdInput}
                       onChange={(e) => setCloudProjectIdInput(e.target.value)}
                       placeholder="例如: abc123xyz"
-                      className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-sm"
+                      className="ios-input flex-1 font-mono text-sm"
                     />
                     <button 
                       onClick={() => {
@@ -964,24 +988,24 @@ export default function App() {
                           window.location.href = `${window.location.origin}${window.location.pathname}?p=${id}`;
                         }
                       }}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                      className="ios-button-primary px-6"
                     >
                       載入
                     </button>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-slate-700 border-b pb-2">最近儲存的專案 (本機紀錄)</h4>
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-black/5 pb-2 ml-1">最近儲存的專案</h4>
                   {savedProjects.length === 0 ? (
-                    <p className="text-sm text-slate-500 italic text-center py-4">尚無儲存紀錄</p>
+                    <p className="text-sm text-slate-400 italic text-center py-8">尚無儲存紀錄</p>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {savedProjects.map((p) => (
-                        <div key={p.id} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-lg hover:border-blue-200 transition-colors">
+                        <div key={p.id} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/60 hover:border-ios-blue/30 transition-all shadow-sm">
                           <div className="flex flex-col">
-                            <span className="text-sm font-mono font-medium text-slate-700">{p.id}</span>
-                            <span className="text-xs text-slate-500">{new Date(p.date).toLocaleString()}</span>
+                            <span className="text-sm font-mono font-bold text-slate-700">{p.id}</span>
+                            <span className="text-[10px] font-medium text-slate-400">{new Date(p.date).toLocaleString()}</span>
                           </div>
                           <div className="flex gap-2">
                             <button 
@@ -990,7 +1014,7 @@ export default function App() {
                                 navigator.clipboard.writeText(url);
                                 alert('網址已複製！');
                               }}
-                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                              className="p-2.5 text-slate-400 hover:text-ios-blue hover:bg-white rounded-xl transition-all shadow-sm"
                               title="複製連結"
                             >
                               <Share2 className="w-4 h-4" />
@@ -999,7 +1023,7 @@ export default function App() {
                               onClick={() => {
                                 window.location.href = `${window.location.origin}${window.location.pathname}?p=${p.id}`;
                               }}
-                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                              className="p-2.5 text-slate-400 hover:text-ios-blue hover:bg-white rounded-xl transition-all shadow-sm"
                               title="開啟專案"
                             >
                               <FolderOpen className="w-4 h-4" />

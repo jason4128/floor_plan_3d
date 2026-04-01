@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Grid, Html } from '@react-three/drei';
+import { OrbitControls, Grid, Html, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { FloorPlanData } from '../lib/gemini';
 import { View, PersonStanding } from 'lucide-react';
@@ -230,67 +230,79 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
   return (
     <div className="w-full h-full bg-slate-900 relative">
       {firstPerson && data && (
-        <div className="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur p-2 rounded-lg shadow-lg border border-slate-200" style={{ width: '200px', height: '200px' }}>
-          <svg viewBox={`0 0 ${width} ${heightDim}`} className="w-full h-full">
-            {data.walls.map((wall, i) => (
-              <line 
-                key={i} 
-                x1={wall.start.x} y1={wall.start.y} 
-                x2={wall.end.x} y2={wall.end.y} 
-                stroke="#64748b" strokeWidth="15" strokeLinecap="round" 
-              />
-            ))}
-            {data.doors.map((door, i) => (
-              <line 
-                key={i} 
-                x1={door.start.x} y1={door.start.y} 
-                x2={door.end.x} y2={door.end.y} 
-                stroke="#fca5a5" strokeWidth="15" strokeLinecap="round" 
-                opacity={showDoors ? 1 : 0.2}
-              />
-            ))}
-            <circle ref={markerRef} r="20" fill="#3b82f6" />
-            <path ref={dirRef} stroke="#3b82f6" strokeWidth="12" strokeLinecap="round" />
-          </svg>
+        <div className="absolute top-6 left-6 z-20 ios-glass w-48 h-48 rounded-2xl border border-white/20 shadow-2xl overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:10px_10px]" />
+          <div className="relative w-full h-full p-2">
+            <svg viewBox={`0 0 ${width} ${heightDim}`} className="w-full h-full drop-shadow-sm">
+              {data.walls.map((wall, i) => (
+                <line 
+                  key={i} 
+                  x1={wall.start.x} y1={wall.start.y} 
+                  x2={wall.end.x} y2={wall.end.y} 
+                  stroke="#1e293b" strokeWidth="25" strokeLinecap="round" 
+                />
+              ))}
+              {data.doors.map((door, i) => (
+                <line 
+                  key={i} 
+                  x1={door.start.x} y1={door.start.y} 
+                  x2={door.end.x} y2={door.end.y} 
+                  stroke="#ef4444" strokeWidth="25" strokeLinecap="round" 
+                  opacity={showDoors ? 1 : 0.2}
+                />
+              ))}
+              <circle ref={markerRef} r="30" fill="#007AFF" />
+              <path ref={dirRef} stroke="#007AFF" strokeWidth="20" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div className="absolute bottom-2 left-0 right-0 text-center">
+            <span className="text-[9px] font-bold text-ios-blue uppercase tracking-widest">Mini Map</span>
+          </div>
         </div>
       )}
 
-      <div className="absolute top-4 right-4 z-10 flex gap-2">
+      <div className="absolute top-6 right-6 z-20 flex flex-col gap-3">
         <button 
           onClick={() => {
             setFirstPerson(!firstPerson);
             if (!firstPerson) setTopDown(false);
           }}
-          className={`p-2 backdrop-blur-md rounded-lg text-white transition-colors flex items-center gap-2 shadow-lg border border-white/20 ${firstPerson ? 'bg-blue-600 hover:bg-blue-700' : 'bg-white/10 hover:bg-white/20'}`}
+          className={`ios-button-secondary w-12 h-12 flex items-center justify-center shadow-lg ${firstPerson ? 'bg-ios-blue text-white' : ''}`}
           title="第一人稱視角"
         >
-          <PersonStanding className="w-5 h-5" />
-          <span className="text-sm font-medium">第一人稱</span>
+          <PersonStanding className="w-6 h-6" />
         </button>
         <button 
           onClick={() => {
             setTopDown(true);
             setFirstPerson(false);
           }}
-          className="p-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg text-white transition-colors flex items-center gap-2 shadow-lg border border-white/20"
+          className="ios-button-secondary w-12 h-12 flex items-center justify-center shadow-lg"
           title="俯瞰視角"
         >
-          <View className="w-5 h-5" />
-          <span className="text-sm font-medium">俯瞰視角</span>
+          <View className="w-6 h-6" />
         </button>
       </div>
 
       {firstPerson && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 bg-black/50 backdrop-blur-md text-white px-6 py-3 rounded-full text-sm flex items-center gap-4 shadow-xl border border-white/10">
-          <div className="flex items-center gap-2">
-            <kbd className="bg-white/20 px-2 py-1 rounded text-xs font-mono">W/S</kbd>
-            <kbd className="bg-white/20 px-2 py-1 rounded text-xs font-mono">↑/↓</kbd>
-            <span>前進後退</span>
+        <div className="absolute bottom-6 left-6 z-20 ios-glass p-4 rounded-2xl border border-white/20 shadow-xl max-w-xs">
+          <div className="flex items-center gap-2 mb-3 border-b border-white/10 pb-2">
+            <div className="w-2 h-2 bg-ios-blue rounded-full animate-pulse" />
+            <span className="text-sm font-bold text-slate-800">第一人稱模式</span>
           </div>
-          <div className="flex items-center gap-2">
-            <kbd className="bg-white/20 px-2 py-1 rounded text-xs font-mono">A/D</kbd>
-            <kbd className="bg-white/20 px-2 py-1 rounded text-xs font-mono">←/→</kbd>
-            <span>左右轉向</span>
+          <div className="grid grid-cols-2 gap-3 text-[10px] text-slate-600 font-medium">
+            <div className="flex items-center gap-2">
+              <kbd className="bg-white/80 px-1.5 py-0.5 rounded border shadow-sm">W/A/S/D</kbd>
+              <span>移動</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <kbd className="bg-white/80 px-1.5 py-0.5 rounded border shadow-sm">滑鼠</kbd>
+              <span>環視</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <kbd className="bg-white/80 px-1.5 py-0.5 rounded border shadow-sm">ESC</kbd>
+              <span>退出</span>
+            </div>
           </div>
         </div>
       )}
@@ -300,11 +312,11 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
         <FirstPersonController active={firstPerson} startMarker={startMarker} />
         {firstPerson && <PlayerTracker markerRef={markerRef} dirRef={dirRef} width={width} heightDim={heightDim} />}
         
-        <ambientLight intensity={0.7} />
-        <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={0.8} />
+        <ambientLight intensity={0.8} />
+        <hemisphereLight color="#ffffff" groundColor="#444444" intensity={0.6} />
         <directionalLight 
-          position={[20, 30, 20]} 
-          intensity={1.5} 
+          position={[10, 20, 10]} 
+          intensity={1.2} 
           castShadow 
           shadow-mapSize-width={2048} 
           shadow-mapSize-height={2048}
@@ -313,6 +325,15 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
           shadow-camera-top={40}
           shadow-camera-bottom={-40}
           shadow-bias={-0.0005}
+        />
+        <pointLight position={[-10, 10, -10]} intensity={0.5} color="#4f46e5" />
+        
+        <ContactShadows 
+          position={[0, -0.01, 0]} 
+          opacity={0.4} 
+          scale={40} 
+          blur={2} 
+          far={4.5} 
         />
         
         {!firstPerson && (
@@ -375,30 +396,36 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
                 imageDimensions={imageDimensions}
               />
             ))}
-            {data.doors.map((door, i) => (
-              <React.Fragment key={`door-group-${i}`}>
-                {showDoors && (
-                  <WallMesh 
-                    start={door.start} 
-                    end={door.end} 
-                    height={wallHeight * 0.8} 
-                    color="#fca5a5" 
-                    thickness={wallThickness * 1.2}
-                    imageDimensions={imageDimensions}
-                  />
-                )}
-                {/* Wall above the door */}
-                <WallMesh 
-                  start={door.start} 
-                  end={door.end} 
-                  height={wallHeight * 0.2} 
-                  yOffset={wallHeight * 0.8}
-                  color="#e2e8f0" 
-                  thickness={wallThickness}
-                  imageDimensions={imageDimensions}
-                />
-              </React.Fragment>
-            ))}
+            {data.doors.map((door, i) => {
+              const doorHeight = Math.min(2.1, wallHeight);
+              const wallAboveHeight = Math.max(0, wallHeight - 2.1);
+              return (
+                <React.Fragment key={`door-group-${i}`}>
+                  {showDoors && (
+                    <WallMesh 
+                      start={door.start} 
+                      end={door.end} 
+                      height={doorHeight} 
+                      color="#fca5a5" 
+                      thickness={wallThickness * 1.2}
+                      imageDimensions={imageDimensions}
+                    />
+                  )}
+                  {/* Wall above the door */}
+                  {wallAboveHeight > 0 && (
+                    <WallMesh 
+                      start={door.start} 
+                      end={door.end} 
+                      height={wallAboveHeight} 
+                      yOffset={doorHeight}
+                      color="#e2e8f0" 
+                      thickness={wallThickness}
+                      imageDimensions={imageDimensions}
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
             {data.rooms?.map((room, i) => {
               const posX = (room.position.x - width / 2) * SCALE;
               const posZ = (room.position.y - heightDim / 2) * SCALE;
