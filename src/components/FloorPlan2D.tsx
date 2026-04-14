@@ -145,7 +145,6 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
           const newData = { ...data };
           newData.doors.push({ start, end });
           onChange(newData);
-          onDrawComplete();
           return;
         }
       }
@@ -160,7 +159,6 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
           color: '#334155'
         });
         onChange(newData);
-        onDrawComplete();
         return;
       }
 
@@ -218,86 +216,8 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
 
     if (dragging) {
       const newData = { ...data };
-      if (dragging.type === 'wall') {
-        const wall = newData.walls[dragging.index];
-        if (dragging.point === 'start') {
-          let newStart = coords;
-          if (e.shiftKey) {
-            const dx = Math.abs(newStart.x - wall.end.x);
-            const dy = Math.abs(newStart.y - wall.end.y);
-            if (dx > dy) newStart = { x: newStart.x, y: wall.end.y };
-            else newStart = { x: wall.end.x, y: newStart.y };
-          }
-          wall.start = newStart;
-        } else if (dragging.point === 'end') {
-          let newEnd = coords;
-          if (e.shiftKey) {
-            const dx = Math.abs(newEnd.x - wall.start.x);
-            const dy = Math.abs(newEnd.y - wall.start.y);
-            if (dx > dy) newEnd = { x: newEnd.x, y: wall.start.y };
-            else newEnd = { x: wall.start.x, y: newEnd.y };
-          }
-          wall.end = newEnd;
-        } else if (dragging.point === 'center' && dragging.dragStartPos) {
-          let dx = coords.x - dragging.dragStartPos.x;
-          let dy = coords.y - dragging.dragStartPos.y;
-          
-          if (e.shiftKey) {
-            if (Math.abs(dx) > Math.abs(dy)) dy = 0;
-            else dx = 0;
-          }
-
-          wall.start = { x: wall.start.x + dx, y: wall.start.y + dy };
-          wall.end = { x: wall.end.x + dx, y: wall.end.y + dy };
-          setDragging({ ...dragging, dragStartPos: { x: dragging.dragStartPos.x + dx, y: dragging.dragStartPos.y + dy } });
-        }
-      } else if (dragging.type === 'curvedWall') {
-        const wall = newData.curvedWalls![dragging.index];
-        if (dragging.point === 'start') wall.start = coords;
-        else if (dragging.point === 'end') wall.end = coords;
-        else if (dragging.point === 'control') wall.control = coords;
-        else if (dragging.point === 'center' && dragging.dragStartPos) {
-          const dx = coords.x - dragging.dragStartPos.x;
-          const dy = coords.y - dragging.dragStartPos.y;
-          wall.start = { x: wall.start.x + dx, y: wall.start.y + dy };
-          wall.end = { x: wall.end.x + dx, y: wall.end.y + dy };
-          wall.control = { x: wall.control.x + dx, y: wall.control.y + dy };
-          setDragging({ ...dragging, dragStartPos: coords });
-        }
-      } else if (dragging.type === 'door') {
-        const door = newData.doors[dragging.index];
-        if (dragging.point === 'start') {
-          let newStart = coords;
-          if (e.shiftKey) {
-            const dx = Math.abs(newStart.x - door.end.x);
-            const dy = Math.abs(newStart.y - door.end.y);
-            if (dx > dy) newStart = { x: newStart.x, y: door.end.y };
-            else newStart = { x: door.end.x, y: newStart.y };
-          }
-          door.start = newStart;
-        } else if (dragging.point === 'end') {
-          let newEnd = coords;
-          if (e.shiftKey) {
-            const dx = Math.abs(newEnd.x - door.start.x);
-            const dy = Math.abs(newEnd.y - door.start.y);
-            if (dx > dy) newEnd = { x: newEnd.x, y: door.start.y };
-            else newEnd = { x: door.start.x, y: newEnd.y };
-          }
-          door.end = newEnd;
-        } else if (dragging.point === 'center' && dragging.dragStartPos) {
-          let dx = coords.x - dragging.dragStartPos.x;
-          let dy = coords.y - dragging.dragStartPos.y;
-
-          if (e.shiftKey) {
-            if (Math.abs(dx) > Math.abs(dy)) dy = 0;
-            else dx = 0;
-          }
-
-          door.start = { x: door.start.x + dx, y: door.start.y + dy };
-          door.end = { x: door.end.x + dx, y: door.end.y + dy };
-          setDragging({ ...dragging, dragStartPos: { x: dragging.dragStartPos.x + dx, y: dragging.dragStartPos.y + dy } });
-        }
-      } else if (dragging.type === 'room' && dragging.dragStartPos) {
+      
+      if (dragging.point === 'center' && dragging.dragStartPos) {
         let dx = coords.x - dragging.dragStartPos.x;
         let dy = coords.y - dragging.dragStartPos.y;
         
@@ -306,12 +226,76 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
           else dx = 0;
         }
 
-        const room = newData.rooms[dragging.index];
-        newData.rooms[dragging.index] = {
-          ...room,
-          position: { x: room.position.x + dx, y: room.position.y + dy }
-        };
+        selectedItems.forEach(item => {
+          if (item.type === 'wall') {
+            const wall = newData.walls[item.index];
+            wall.start = { x: wall.start.x + dx, y: wall.start.y + dy };
+            wall.end = { x: wall.end.x + dx, y: wall.end.y + dy };
+          } else if (item.type === 'curvedWall') {
+            const wall = newData.curvedWalls![item.index];
+            wall.start = { x: wall.start.x + dx, y: wall.start.y + dy };
+            wall.end = { x: wall.end.x + dx, y: wall.end.y + dy };
+            wall.control = { x: wall.control.x + dx, y: wall.control.y + dy };
+          } else if (item.type === 'door') {
+            const door = newData.doors[item.index];
+            door.start = { x: door.start.x + dx, y: door.start.y + dy };
+            door.end = { x: door.end.x + dx, y: door.end.y + dy };
+          } else if (item.type === 'room') {
+            const room = newData.rooms[item.index];
+            room.position = { x: room.position.x + dx, y: room.position.y + dy };
+          }
+        });
+        
         setDragging({ ...dragging, dragStartPos: { x: dragging.dragStartPos.x + dx, y: dragging.dragStartPos.y + dy } });
+      } else {
+        if (dragging.type === 'wall') {
+          const wall = newData.walls[dragging.index];
+          if (dragging.point === 'start') {
+            let newStart = coords;
+            if (e.shiftKey) {
+              const dx = Math.abs(newStart.x - wall.end.x);
+              const dy = Math.abs(newStart.y - wall.end.y);
+              if (dx > dy) newStart = { x: newStart.x, y: wall.end.y };
+              else newStart = { x: wall.end.x, y: newStart.y };
+            }
+            wall.start = newStart;
+          } else if (dragging.point === 'end') {
+            let newEnd = coords;
+            if (e.shiftKey) {
+              const dx = Math.abs(newEnd.x - wall.start.x);
+              const dy = Math.abs(newEnd.y - wall.start.y);
+              if (dx > dy) newEnd = { x: newEnd.x, y: wall.start.y };
+              else newEnd = { x: wall.start.x, y: newEnd.y };
+            }
+            wall.end = newEnd;
+          }
+        } else if (dragging.type === 'curvedWall') {
+          const wall = newData.curvedWalls![dragging.index];
+          if (dragging.point === 'start') wall.start = coords;
+          else if (dragging.point === 'end') wall.end = coords;
+          else if (dragging.point === 'control') wall.control = coords;
+        } else if (dragging.type === 'door') {
+          const door = newData.doors[dragging.index];
+          if (dragging.point === 'start') {
+            let newStart = coords;
+            if (e.shiftKey) {
+              const dx = Math.abs(newStart.x - door.end.x);
+              const dy = Math.abs(newStart.y - door.end.y);
+              if (dx > dy) newStart = { x: newStart.x, y: door.end.y };
+              else newStart = { x: door.end.x, y: newStart.y };
+            }
+            door.start = newStart;
+          } else if (dragging.point === 'end') {
+            let newEnd = coords;
+            if (e.shiftKey) {
+              const dx = Math.abs(newEnd.x - door.start.x);
+              const dy = Math.abs(newEnd.y - door.start.y);
+              if (dx > dy) newEnd = { x: newEnd.x, y: door.start.y };
+              else newEnd = { x: door.start.x, y: newEnd.y };
+            }
+            door.end = newEnd;
+          }
+        }
       }
       onChange(newData);
     }
@@ -346,7 +330,6 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
         } else if (drawMode === 'door') {
           newData.doors.push(newItem);
           setDrawingStart(null);
-          onDrawComplete();
         }
         onChange(newData);
       } else {
@@ -626,11 +609,43 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
                       if (panToolActive || drawMode !== 'none') return;
                       e.stopPropagation(); 
                       const coords = getMouseCoords(e);
-                      if (e.shiftKey) {
-                        setSelectedItems([...selectedItems, { type: 'curvedWall', index: i }]);
-                      } else {
-                        setSelectedItems([{ type: 'curvedWall', index: i }]);
+                      
+                      let currentSelection = selectedItems;
+                      if (!selectedItems.some(s => s.type === 'curvedWall' && s.index === i)) {
+                        if (e.shiftKey) {
+                          currentSelection = [...selectedItems, { type: 'curvedWall', index: i }];
+                        } else {
+                          currentSelection = [{ type: 'curvedWall', index: i }];
+                        }
+                        setSelectedItems(currentSelection);
                       }
+
+                      if (e.ctrlKey || e.metaKey) {
+                        const newData = { ...data };
+                        const newSelection: { type: 'wall' | 'curvedWall' | 'door' | 'room', index: number }[] = [];
+                        
+                        currentSelection.forEach(item => {
+                           if (item.type === 'wall') {
+                             newData.walls.push({ ...data.walls[item.index] });
+                             newSelection.push({ type: 'wall', index: newData.walls.length - 1 });
+                           } else if (item.type === 'curvedWall') {
+                             newData.curvedWalls!.push({ ...data.curvedWalls![item.index] });
+                             newSelection.push({ type: 'curvedWall', index: newData.curvedWalls!.length - 1 });
+                           } else if (item.type === 'door') {
+                             newData.doors.push({ ...data.doors[item.index] });
+                             newSelection.push({ type: 'door', index: newData.doors.length - 1 });
+                           } else if (item.type === 'room') {
+                             newData.rooms.push({ ...data.rooms[item.index] });
+                             newSelection.push({ type: 'room', index: newData.rooms.length - 1 });
+                           }
+                        });
+                        
+                        onChange(newData);
+                        setSelectedItems(newSelection);
+                        setDragging({ type: newSelection[0].type, index: newSelection[0].index, point: 'center', dragStartPos: coords });
+                        return;
+                      }
+
                       setDragging({ type: 'curvedWall', index: i, point: 'center', dragStartPos: coords });
                     }}
                   />
@@ -680,11 +695,43 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
                       if (panToolActive || drawMode !== 'none') return;
                       e.stopPropagation(); 
                       const coords = getMouseCoords(e);
-                      if (e.shiftKey) {
-                        setSelectedItems([...selectedItems, { type: 'wall', index: i }]);
-                      } else {
-                        setSelectedItems([{ type: 'wall', index: i }]);
+                      
+                      let currentSelection = selectedItems;
+                      if (!selectedItems.some(s => s.type === 'wall' && s.index === i)) {
+                        if (e.shiftKey) {
+                          currentSelection = [...selectedItems, { type: 'wall', index: i }];
+                        } else {
+                          currentSelection = [{ type: 'wall', index: i }];
+                        }
+                        setSelectedItems(currentSelection);
                       }
+
+                      if (e.ctrlKey || e.metaKey) {
+                        const newData = { ...data };
+                        const newSelection: { type: 'wall' | 'curvedWall' | 'door' | 'room', index: number }[] = [];
+                        
+                        currentSelection.forEach(item => {
+                           if (item.type === 'wall') {
+                             newData.walls.push({ ...data.walls[item.index] });
+                             newSelection.push({ type: 'wall', index: newData.walls.length - 1 });
+                           } else if (item.type === 'curvedWall') {
+                             newData.curvedWalls!.push({ ...data.curvedWalls![item.index] });
+                             newSelection.push({ type: 'curvedWall', index: newData.curvedWalls!.length - 1 });
+                           } else if (item.type === 'door') {
+                             newData.doors.push({ ...data.doors[item.index] });
+                             newSelection.push({ type: 'door', index: newData.doors.length - 1 });
+                           } else if (item.type === 'room') {
+                             newData.rooms.push({ ...data.rooms[item.index] });
+                             newSelection.push({ type: 'room', index: newData.rooms.length - 1 });
+                           }
+                        });
+                        
+                        onChange(newData);
+                        setSelectedItems(newSelection);
+                        setDragging({ type: newSelection[0].type, index: newSelection[0].index, point: 'center', dragStartPos: coords });
+                        return;
+                      }
+
                       setDragging({ type: 'wall', index: i, point: 'center', dragStartPos: coords });
                     }}
                   />
@@ -732,11 +779,43 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
                       if (panToolActive || drawMode !== 'none') return;
                       e.stopPropagation(); 
                       const coords = getMouseCoords(e);
-                      if (e.shiftKey) {
-                        setSelectedItems([...selectedItems, { type: 'door', index: i }]);
-                      } else {
-                        setSelectedItems([{ type: 'door', index: i }]);
+                      
+                      let currentSelection = selectedItems;
+                      if (!selectedItems.some(s => s.type === 'door' && s.index === i)) {
+                        if (e.shiftKey) {
+                          currentSelection = [...selectedItems, { type: 'door', index: i }];
+                        } else {
+                          currentSelection = [{ type: 'door', index: i }];
+                        }
+                        setSelectedItems(currentSelection);
                       }
+
+                      if (e.ctrlKey || e.metaKey) {
+                        const newData = { ...data };
+                        const newSelection: { type: 'wall' | 'curvedWall' | 'door' | 'room', index: number }[] = [];
+                        
+                        currentSelection.forEach(item => {
+                           if (item.type === 'wall') {
+                             newData.walls.push({ ...data.walls[item.index] });
+                             newSelection.push({ type: 'wall', index: newData.walls.length - 1 });
+                           } else if (item.type === 'curvedWall') {
+                             newData.curvedWalls!.push({ ...data.curvedWalls![item.index] });
+                             newSelection.push({ type: 'curvedWall', index: newData.curvedWalls!.length - 1 });
+                           } else if (item.type === 'door') {
+                             newData.doors.push({ ...data.doors[item.index] });
+                             newSelection.push({ type: 'door', index: newData.doors.length - 1 });
+                           } else if (item.type === 'room') {
+                             newData.rooms.push({ ...data.rooms[item.index] });
+                             newSelection.push({ type: 'room', index: newData.rooms.length - 1 });
+                           }
+                        });
+                        
+                        onChange(newData);
+                        setSelectedItems(newSelection);
+                        setDragging({ type: newSelection[0].type, index: newSelection[0].index, point: 'center', dragStartPos: coords });
+                        return;
+                      }
+
                       setDragging({ type: 'door', index: i, point: 'center', dragStartPos: coords });
                     }}
                   />
@@ -771,12 +850,45 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
                     onMouseDown={(e) => {
                       if (panToolActive || drawMode !== 'none') return;
                       e.stopPropagation();
-                      if (e.shiftKey) {
-                        setSelectedItems([...selectedItems, { type: 'room', index: i }]);
-                      } else {
-                        setSelectedItems([{ type: 'room', index: i }]);
+                      
+                      let currentSelection = selectedItems;
+                      if (!selectedItems.some(s => s.type === 'room' && s.index === i)) {
+                        if (e.shiftKey) {
+                          currentSelection = [...selectedItems, { type: 'room', index: i }];
+                        } else {
+                          currentSelection = [{ type: 'room', index: i }];
+                        }
+                        setSelectedItems(currentSelection);
                       }
+                      
                       const coords = getMouseCoords(e);
+
+                      if (e.ctrlKey || e.metaKey) {
+                        const newData = { ...data };
+                        const newSelection: { type: 'wall' | 'curvedWall' | 'door' | 'room', index: number }[] = [];
+                        
+                        currentSelection.forEach(item => {
+                           if (item.type === 'wall') {
+                             newData.walls.push({ ...data.walls[item.index] });
+                             newSelection.push({ type: 'wall', index: newData.walls.length - 1 });
+                           } else if (item.type === 'curvedWall') {
+                             newData.curvedWalls!.push({ ...data.curvedWalls![item.index] });
+                             newSelection.push({ type: 'curvedWall', index: newData.curvedWalls!.length - 1 });
+                           } else if (item.type === 'door') {
+                             newData.doors.push({ ...data.doors[item.index] });
+                             newSelection.push({ type: 'door', index: newData.doors.length - 1 });
+                           } else if (item.type === 'room') {
+                             newData.rooms.push({ ...data.rooms[item.index] });
+                             newSelection.push({ type: 'room', index: newData.rooms.length - 1 });
+                           }
+                        });
+                        
+                        onChange(newData);
+                        setSelectedItems(newSelection);
+                        setDragging({ type: newSelection[0].type, index: newSelection[0].index, point: 'center', dragStartPos: coords });
+                        return;
+                      }
+
                       setDragging({ type: 'room', index: i, point: 'center', dragStartPos: coords });
                     }}
                     onDoubleClick={(e) => {
