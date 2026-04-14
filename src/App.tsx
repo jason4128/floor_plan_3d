@@ -910,6 +910,7 @@ export default function App() {
             onChange={(newData) => updateData(newData)} 
             imagePreview={imagePreview}
             drawMode={drawMode}
+            setDrawMode={setDrawMode}
             doorType={doorType}
             onDrawComplete={() => setDrawMode('none')}
             selectedItems={selectedItems}

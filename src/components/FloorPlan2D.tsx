@@ -7,6 +7,7 @@ interface Props {
   onChange: (data: FloorPlanData) => void;
   imagePreview: string | null;
   drawMode: 'none' | 'wall' | 'curve' | 'door' | 'text';
+  setDrawMode: (mode: 'none' | 'wall' | 'curve' | 'door' | 'text') => void;
   doorType: 'single' | 'double';
   onDrawComplete: () => void;
   selectedItems: { type: 'wall' | 'curvedWall' | 'door' | 'room', index: number }[];
@@ -22,7 +23,7 @@ interface Props {
   imageDimensions: { width: number, height: number } | null;
 }
 
-export function FloorPlan2D({ data, onChange, imagePreview, drawMode, doorType, onDrawComplete, selectedItems, setSelectedItems, bgOpacity, lineOpacity, wallThickness, visibility, imageDimensions }: Props) {
+export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMode, doorType, onDrawComplete, selectedItems, setSelectedItems, bgOpacity, lineOpacity, wallThickness, visibility, imageDimensions }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<{ 
     type: 'wall' | 'curvedWall' | 'door' | 'room', 
@@ -218,7 +219,38 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, doorType, 
     if (dragging) {
       const newData = { ...data };
       if (dragging.type === 'wall') {
-        // ... existing wall logic
+        const wall = newData.walls[dragging.index];
+        if (dragging.point === 'start') {
+          let newStart = coords;
+          if (e.shiftKey) {
+            const dx = Math.abs(newStart.x - wall.end.x);
+            const dy = Math.abs(newStart.y - wall.end.y);
+            if (dx > dy) newStart = { x: newStart.x, y: wall.end.y };
+            else newStart = { x: wall.end.x, y: newStart.y };
+          }
+          wall.start = newStart;
+        } else if (dragging.point === 'end') {
+          let newEnd = coords;
+          if (e.shiftKey) {
+            const dx = Math.abs(newEnd.x - wall.start.x);
+            const dy = Math.abs(newEnd.y - wall.start.y);
+            if (dx > dy) newEnd = { x: newEnd.x, y: wall.start.y };
+            else newEnd = { x: wall.start.x, y: newEnd.y };
+          }
+          wall.end = newEnd;
+        } else if (dragging.point === 'center' && dragging.dragStartPos) {
+          let dx = coords.x - dragging.dragStartPos.x;
+          let dy = coords.y - dragging.dragStartPos.y;
+          
+          if (e.shiftKey) {
+            if (Math.abs(dx) > Math.abs(dy)) dy = 0;
+            else dx = 0;
+          }
+
+          wall.start = { x: wall.start.x + dx, y: wall.start.y + dy };
+          wall.end = { x: wall.end.x + dx, y: wall.end.y + dy };
+          setDragging({ ...dragging, dragStartPos: { x: dragging.dragStartPos.x + dx, y: dragging.dragStartPos.y + dy } });
+        }
       } else if (dragging.type === 'curvedWall') {
         const wall = newData.curvedWalls![dragging.index];
         if (dragging.point === 'start') wall.start = coords;
@@ -605,9 +637,25 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, doorType, 
                   {isSelected && selectedItems.length === 1 && (
                     <>
                       <circle cx={wall.start.x} cy={wall.start.y} r={strokeW} fill="#2563eb" className="cursor-move"
-                        onMouseDown={(e) => { e.stopPropagation(); setDragging({ type: 'curvedWall', index: i, point: 'start' }); }} />
+                        onMouseDown={(e) => { e.stopPropagation(); setDragging({ type: 'curvedWall', index: i, point: 'start' }); }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setDrawMode('curve');
+                          setDrawingStart(wall.start);
+                          setMousePos(wall.start);
+                          setSelectedItems([]);
+                        }}
+                      />
                       <circle cx={wall.end.x} cy={wall.end.y} r={strokeW} fill="#2563eb" className="cursor-move"
-                        onMouseDown={(e) => { e.stopPropagation(); setDragging({ type: 'curvedWall', index: i, point: 'end' }); }} />
+                        onMouseDown={(e) => { e.stopPropagation(); setDragging({ type: 'curvedWall', index: i, point: 'end' }); }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setDrawMode('curve');
+                          setDrawingStart(wall.end);
+                          setMousePos(wall.end);
+                          setSelectedItems([]);
+                        }}
+                      />
                       <circle cx={wall.control.x} cy={wall.control.y} r={strokeW} fill="#f59e0b" className="cursor-move"
                         onMouseDown={(e) => { e.stopPropagation(); setDragging({ type: 'curvedWall', index: i, point: 'control' }); }} />
                     </>
@@ -643,9 +691,25 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, doorType, 
                   {isSelected && selectedItems.length === 1 && (
                     <>
                       <circle cx={wall.start.x} cy={wall.start.y} r={strokeW} fill="#2563eb" className="cursor-move"
-                        onMouseDown={(e) => { e.stopPropagation(); setDragging({ type: 'wall', index: i, point: 'start' }); }} />
+                        onMouseDown={(e) => { e.stopPropagation(); setDragging({ type: 'wall', index: i, point: 'start' }); }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setDrawMode('wall');
+                          setDrawingStart(wall.start);
+                          setMousePos(wall.start);
+                          setSelectedItems([]);
+                        }}
+                      />
                       <circle cx={wall.end.x} cy={wall.end.y} r={strokeW} fill="#2563eb" className="cursor-move"
-                        onMouseDown={(e) => { e.stopPropagation(); setDragging({ type: 'wall', index: i, point: 'end' }); }} />
+                        onMouseDown={(e) => { e.stopPropagation(); setDragging({ type: 'wall', index: i, point: 'end' }); }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setDrawMode('wall');
+                          setDrawingStart(wall.end);
+                          setMousePos(wall.end);
+                          setSelectedItems([]);
+                        }}
+                      />
                     </>
                   )}
                 </g>
