@@ -195,6 +195,51 @@ function WallMesh({
   );
 }
 
+function CurvedWallMesh({ 
+  start, 
+  control, 
+  end, 
+  height, 
+  imageDimensions,
+  thickness = 0.3,
+  color = '#e2e8f0'
+}: { 
+  start: {x: number, y: number}, 
+  control: {x: number, y: number}, 
+  end: {x: number, y: number}, 
+  height: number, 
+  imageDimensions: { width: number, height: number } | null,
+  thickness?: number,
+  color?: string
+}) {
+  const segments = 20;
+  const points: {x: number, y: number}[] = [];
+  
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    // Quadratic Bezier formula: (1-t)^2 * P0 + 2(1-t)t * P1 + t^2 * P2
+    const x = Math.pow(1 - t, 2) * start.x + 2 * (1 - t) * t * control.x + Math.pow(t, 2) * end.x;
+    const y = Math.pow(1 - t, 2) * start.y + 2 * (1 - t) * t * control.y + Math.pow(t, 2) * end.y;
+    points.push({ x, y });
+  }
+
+  return (
+    <group>
+      {points.slice(0, -1).map((p, i) => (
+        <WallMesh 
+          key={i}
+          start={p}
+          end={points[i + 1]}
+          height={height}
+          thickness={thickness}
+          imageDimensions={imageDimensions}
+          color={color}
+        />
+      ))}
+    </group>
+  );
+}
+
 export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, labelSize3D, showDoors = true }: FloorPlan3DProps) {
   const width = imageDimensions?.width || 1000;
   const heightDim = imageDimensions?.height || 1000;
@@ -272,9 +317,17 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
             <svg viewBox={`0 0 ${width} ${heightDim}`} className="w-full h-full drop-shadow-sm">
               {data.walls.map((wall, i) => (
                 <line 
-                  key={i} 
+                  key={`mini-wall-${i}`} 
                   x1={wall.start.x} y1={wall.start.y} 
                   x2={wall.end.x} y2={wall.end.y} 
+                  stroke="#1e293b" strokeWidth="25" strokeLinecap="round" 
+                />
+              ))}
+              {data.curvedWalls?.map((wall, i) => (
+                <path 
+                  key={`mini-curved-${i}`}
+                  d={`M ${wall.start.x} ${wall.start.y} Q ${wall.control.x} ${wall.control.y} ${wall.end.x} ${wall.end.y}`}
+                  fill="none"
                   stroke="#1e293b" strokeWidth="25" strokeLinecap="round" 
                 />
               ))}
@@ -442,6 +495,17 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
                 start={wall.start} 
                 end={wall.end} 
                 height={wallHeight} 
+                thickness={wallThickness}
+                imageDimensions={imageDimensions}
+              />
+            ))}
+            {data.curvedWalls?.map((wall, i) => (
+              <CurvedWallMesh 
+                key={`curved-wall-${i}`}
+                start={wall.start}
+                control={wall.control}
+                end={wall.end}
+                height={wallHeight}
                 thickness={wallThickness}
                 imageDimensions={imageDimensions}
               />

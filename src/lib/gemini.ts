@@ -22,8 +22,15 @@ export interface Room {
   color?: string;
 }
 
+export interface CurvedWall {
+  start: Point;
+  control: Point;
+  end: Point;
+}
+
 export interface FloorPlanData {
   walls: Wall[];
+  curvedWalls?: CurvedWall[];
   doors: Door[];
   rooms: Room[];
 }

@@ -11,7 +11,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 type Step = 'upload' | 'edit2d' | 'view3d';
-type DrawMode = 'none' | 'wall' | 'door' | 'text';
+type DrawMode = 'none' | 'wall' | 'curve' | 'door' | 'text';
 
 export default function App() {
   const [step, setStep] = useState<Step>('upload');
@@ -93,8 +93,9 @@ export default function App() {
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
         if (data) {
           e.preventDefault();
-          const all: { type: 'wall' | 'door' | 'room', index: number }[] = [];
+          const all: { type: 'wall' | 'curvedWall' | 'door' | 'room', index: number }[] = [];
           data.walls.forEach((_, i) => all.push({ type: 'wall', index: i }));
+          data.curvedWalls?.forEach((_, i) => all.push({ type: 'curvedWall', index: i }));
           data.doors.forEach((_, i) => all.push({ type: 'door', index: i }));
           data.rooms.forEach((_, i) => all.push({ type: 'room', index: i }));
           setSelectedItems(all);
@@ -144,7 +145,7 @@ export default function App() {
   }, []);
   const [drawMode, setDrawMode] = useState<DrawMode>('none');
   const [doorType, setDoorType] = useState<'single' | 'double'>('single');
-  const [selectedItems, setSelectedItems] = useState<{ type: 'wall' | 'door' | 'room', index: number }[]>([]);
+  const [selectedItems, setSelectedItems] = useState<{ type: 'wall' | 'curvedWall' | 'door' | 'room', index: number }[]>([]);
 
   const [imageDimensions, setImageDimensions] = useState<{width: number, height: number} | null>(null);
 
@@ -247,10 +248,12 @@ export default function App() {
     
     // Sort indices in descending order to avoid index shift issues
     const wallsToDelete = selectedItems.filter(item => item.type === 'wall').map(item => item.index).sort((a, b) => b - a);
+    const curvedWallsToDelete = selectedItems.filter(item => item.type === 'curvedWall').map(item => item.index).sort((a, b) => b - a);
     const doorsToDelete = selectedItems.filter(item => item.type === 'door').map(item => item.index).sort((a, b) => b - a);
     const roomsToDelete = selectedItems.filter(item => item.type === 'room').map(item => item.index).sort((a, b) => b - a);
 
     wallsToDelete.forEach(index => newData.walls.splice(index, 1));
+    curvedWallsToDelete.forEach(index => newData.curvedWalls?.splice(index, 1));
     doorsToDelete.forEach(index => newData.doors.splice(index, 1));
     roomsToDelete.forEach(index => newData.rooms.splice(index, 1));
 
@@ -566,6 +569,12 @@ export default function App() {
                       className={`flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium transition-all ${drawMode === 'wall' ? 'bg-ios-blue text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}
                     >
                       <Plus className="w-4 h-4" /> 牆壁
+                    </button>
+                    <button 
+                      onClick={() => setDrawMode('curve')}
+                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium transition-all ${drawMode === 'curve' ? 'bg-ios-blue text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}
+                    >
+                      <Plus className="w-4 h-4" /> 曲線牆
                     </button>
                     <button 
                       onClick={() => setDrawMode('door')}
