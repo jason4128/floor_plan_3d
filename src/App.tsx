@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, Eye, EyeOff, Settings, X, Undo2, Redo2, CheckSquare, Cloud, FolderOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, Eye, EyeOff, Settings, X, Undo2, Redo2, CheckSquare, Cloud, FolderOpen, ChevronLeft, ChevronRight, Ruler } from 'lucide-react';
 import { FloorPlan3D } from './components/FloorPlan3D';
 import { FloorPlan2D } from './components/FloorPlan2D';
 import { analyzeFloorPlan, FloorPlanData } from './lib/gemini';
@@ -11,7 +11,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 type Step = 'upload' | 'edit2d' | 'view3d';
-type DrawMode = 'none' | 'wall' | 'curve' | 'door' | 'text';
+type DrawMode = 'none' | 'wall' | 'curve' | 'door' | 'text' | 'scale';
 
 export default function App() {
   const [step, setStep] = useState<Step>('upload');
@@ -194,6 +194,38 @@ export default function App() {
         img.src = result;
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleScaleChange = (factor: number) => {
+    if (imageDimensions) {
+      setImageDimensions({
+        width: imageDimensions.width * factor,
+        height: imageDimensions.height * factor
+      });
+    }
+    if (data) {
+      const newData = { ...data };
+      newData.walls = newData.walls.map(w => ({
+        start: { x: w.start.x * factor, y: w.start.y * factor },
+        end: { x: w.end.x * factor, y: w.end.y * factor }
+      }));
+      if (newData.curvedWalls) {
+        newData.curvedWalls = newData.curvedWalls.map(w => ({
+          start: { x: w.start.x * factor, y: w.start.y * factor },
+          end: { x: w.end.x * factor, y: w.end.y * factor },
+          control: { x: w.control.x * factor, y: w.control.y * factor }
+        }));
+      }
+      newData.doors = newData.doors.map(d => ({
+        start: { x: d.start.x * factor, y: d.start.y * factor },
+        end: { x: d.end.x * factor, y: d.end.y * factor }
+      }));
+      newData.rooms = newData.rooms.map(r => ({
+        ...r,
+        position: { x: r.position.x * factor, y: r.position.y * factor }
+      }));
+      updateData(newData);
     }
   };
 
@@ -558,6 +590,12 @@ export default function App() {
                       <MousePointer2 className="w-4 h-4" /> 選取
                     </button>
                     <button 
+                      onClick={() => setDrawMode('scale')}
+                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium transition-all ${drawMode === 'scale' ? 'bg-ios-blue text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}
+                    >
+                      <Ruler className="w-4 h-4" /> 比例
+                    </button>
+                    <button 
                       onClick={handleDeleteSelected}
                       disabled={selectedItems.length === 0}
                       className="flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium bg-white text-red-500 border border-slate-200 active:bg-red-50 disabled:opacity-30 transition-all"
@@ -920,6 +958,7 @@ export default function App() {
             wallThickness={wallThickness}
             visibility={visibility}
             imageDimensions={imageDimensions}
+            onScaleChange={handleScaleChange}
           />
         )}
 

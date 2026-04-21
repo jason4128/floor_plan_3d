@@ -21,9 +21,10 @@ interface Props {
     rooms: boolean;
   };
   imageDimensions: { width: number, height: number } | null;
+  onScaleChange?: (factor: number) => void;
 }
 
-export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMode, doorType, onDrawComplete, selectedItems, setSelectedItems, bgOpacity, lineOpacity, wallThickness, visibility, imageDimensions }: Props) {
+export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMode, doorType, onDrawComplete, selectedItems, setSelectedItems, bgOpacity, lineOpacity, wallThickness, visibility, imageDimensions, onScaleChange }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<{ 
     type: 'wall' | 'curvedWall' | 'door' | 'room', 
@@ -34,6 +35,8 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
   const [drawingStart, setDrawingStart] = useState<Point | null>(null);
   const [drawingEnd, setDrawingEnd] = useState<Point | null>(null);
   const [mousePos, setMousePos] = useState<Point | null>(null);
+  const [scalePrompt, setScalePrompt] = useState<{ length: number } | null>(null);
+  const [scaleInput, setScaleInput] = useState("");
   
   // Zoom & Pan State
   const [scale, setScale] = useState(1);
@@ -330,6 +333,12 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
         } else if (drawMode === 'door') {
           newData.doors.push(newItem);
           setDrawingStart(null);
+        } else if (drawMode === 'scale') {
+          const length = Math.hypot(coords.x - drawingStart.x, coords.y - drawingStart.y);
+          setScalePrompt({ length });
+          setScaleInput("");
+          setDrawingStart(null);
+          return;
         }
         onChange(newData);
       } else {
@@ -933,7 +942,7 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
                 ) : (
                   <line
                     x1={drawingStart.x} y1={drawingStart.y} x2={mousePos.x} y2={mousePos.y}
-                    stroke={drawMode === 'wall' ? "#3b82f6" : "#ef4444"}
+                    stroke={drawMode === 'scale' ? "#10b981" : drawMode === 'wall' ? "#3b82f6" : "#ef4444"}
                     strokeWidth={strokeW}
                     strokeDasharray="10,10"
                     strokeLinecap="round"
@@ -967,6 +976,62 @@ export function FloorPlan2D({ data, onChange, imagePreview, drawMode, setDrawMod
         <span className="flex items-center gap-2"><kbd className="bg-white/80 px-1.5 py-0.5 rounded border shadow-sm text-slate-600">右鍵</kbd> 結束繪製</span>
         <span className="flex items-center gap-2"><kbd className="bg-white/80 px-1.5 py-0.5 rounded border shadow-sm text-slate-600">雙擊文字</kbd> 編輯</span>
       </div>
+
+      {scalePrompt && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-2xl shadow-2xl w-[320px] animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-bold text-slate-800 mb-2">設定比例</h3>
+            <p className="text-sm text-slate-500 mb-4">請輸入這段線段的實際長度 (公尺)：</p>
+            <input
+              type="number"
+              value={scaleInput}
+              onChange={(e) => setScaleInput(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-ios-blue mb-4"
+              placeholder="例如: 5"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const meters = Number(scaleInput);
+                  if (!isNaN(meters) && meters > 0) {
+                    const factor = (meters * 50) / scalePrompt.length;
+                    if (onScaleChange) onScaleChange(factor);
+                  }
+                  setScalePrompt(null);
+                  onDrawComplete();
+                } else if (e.key === 'Escape') {
+                  setScalePrompt(null);
+                  onDrawComplete();
+                }
+              }}
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setScalePrompt(null);
+                  onDrawComplete();
+                }}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  const meters = Number(scaleInput);
+                  if (!isNaN(meters) && meters > 0) {
+                    const factor = (meters * 50) / scalePrompt.length;
+                    if (onScaleChange) onScaleChange(factor);
+                  }
+                  setScalePrompt(null);
+                  onDrawComplete();
+                }}
+                className="px-4 py-2 text-sm font-medium bg-ios-blue text-white hover:bg-blue-600 rounded-xl transition-colors shadow-sm"
+              >
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
