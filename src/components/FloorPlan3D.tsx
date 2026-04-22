@@ -257,7 +257,7 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
 
   const handleAddNote = () => {
     if (!newNoteText.trim() || selectedRoomIndex === null || !data || !onChange) return;
-    const newData = { ...data };
+    const newData = JSON.parse(JSON.stringify(data));
     const room = newData.rooms[selectedRoomIndex];
     room.notes = room.notes || [];
     room.notes.push(newNoteText.trim());
@@ -267,7 +267,7 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
 
   const handleDeleteNote = (noteIndex: number) => {
     if (selectedRoomIndex === null || !data || !onChange) return;
-    const newData = { ...data };
+    const newData = JSON.parse(JSON.stringify(data));
     const room = newData.rooms[selectedRoomIndex];
     if (room.notes) {
       room.notes.splice(noteIndex, 1);

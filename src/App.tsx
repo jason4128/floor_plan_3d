@@ -38,7 +38,7 @@ export default function App() {
   const [showCloudProjects, setShowCloudProjects] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [cloudProjectIdInput, setCloudProjectIdInput] = useState('');
-  const [savedProjects, setSavedProjects] = useState<{id: string, date: string}[]>(() => {
+  const [savedProjects, setSavedProjects] = useState<{id: string, date: string, name?: string}[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('saved_projects') || '[]');
     } catch {
@@ -140,8 +140,13 @@ export default function App() {
       await setDoc(doc(db, 'projects', projectId), projectData, { merge: true });
       
       // Update saved projects list for returning users
-      const newProject = { id: projectId, date: new Date().toISOString() };
       setSavedProjects(prev => {
+        const existing = prev.find(p => p.id === projectId);
+        const newProject = { 
+          id: projectId, 
+          date: new Date().toISOString(),
+          name: existing?.name // preserve existing name if any
+        };
         const filtered = prev.filter(p => p.id !== projectId);
         const updated = [newProject, ...filtered].slice(0, 20);
         localStorage.setItem('saved_projects', JSON.stringify(updated));
@@ -1104,10 +1109,26 @@ export default function App() {
                       {savedProjects.map((p) => (
                         <div key={p.id} className="flex items-center justify-between p-4 bg-white/40 rounded-2xl border border-white/60 hover:border-ios-blue/30 transition-all shadow-sm">
                           <div className="flex flex-col">
-                            <span className="text-sm font-mono font-bold text-slate-700">{p.id}</span>
+                            <span className="text-sm font-mono font-bold text-slate-700">{p.name || p.id}</span>
                             <span className="text-[10px] font-medium text-slate-400">{new Date(p.date).toLocaleString()}</span>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-1">
+                            <button 
+                              onClick={() => {
+                                const newName = window.prompt("請輸入專案名稱", p.name || p.id);
+                                if (newName) {
+                                  setSavedProjects(prev => {
+                                    const updated = prev.map(proj => proj.id === p.id ? { ...proj, name: newName } : proj);
+                                    localStorage.setItem('saved_projects', JSON.stringify(updated));
+                                    return updated;
+                                  });
+                                }
+                              }}
+                              className="p-2.5 text-slate-400 hover:text-ios-blue hover:bg-white rounded-xl transition-all shadow-sm"
+                              title="重新命名"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
                             <button 
                               onClick={() => {
                                 const url = `${window.location.origin}${window.location.pathname}?p=${p.id}`;
@@ -1127,6 +1148,21 @@ export default function App() {
                               title="開啟專案"
                             >
                               <FolderOpen className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                if (window.confirm("確定要將此紀錄從清單中刪除嗎？\n(注意：這只會移除本地紀錄，不會刪除雲端專案檔案)")) {
+                                  setSavedProjects(prev => {
+                                    const updated = prev.filter(proj => proj.id !== p.id);
+                                    localStorage.setItem('saved_projects', JSON.stringify(updated));
+                                    return updated;
+                                  });
+                                }
+                              }}
+                              className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-white rounded-xl transition-all shadow-sm"
+                              title="刪除"
+                            >
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
