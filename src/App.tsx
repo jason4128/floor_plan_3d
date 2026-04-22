@@ -46,6 +46,10 @@ export default function App() {
     }
   });
   
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  
   // History for Undo/Redo
   const [history, setHistory] = useState<FloorPlanData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -55,6 +59,7 @@ export default function App() {
 
   const updateData = (newData: FloorPlanData, skipHistory = false) => {
     setData(newData);
+    setHasUnsavedChanges(true);
     if (!skipHistory) {
       const newHistory = history.slice(0, historyIndex + 1);
       newHistory.push(JSON.parse(JSON.stringify(newData)));
@@ -65,11 +70,113 @@ export default function App() {
     }
   };
 
+  const autoSaveProject = async () => {
+    if (!data) return;
+    setIsAutoSaving(true);
+    try {
+      let projectId = currentProjectId;
+      if (!projectId) {
+        projectId = Math.random().toString(36).substring(2, 15);
+        setCurrentProjectId(projectId);
+        window.history.pushState({}, '', `?p=${projectId}`);
+      }
+
+      let finalImagePreview = imagePreview;
+      let finalBase64Data = base64Data;
+
+      if (imagePreview && !currentProjectId) {
+        // Only compress image on FIRST save (when projectId is generated) to avoid lag
+        const sizeInBytes = Math.round((imagePreview.length * 3) / 4);
+        const MAX_SIZE = 800000; // ~800KB
+        if (sizeInBytes > MAX_SIZE) {
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = imagePreview;
+          });
+
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            let width = img.width;
+            let height = img.height;
+            let quality = 0.7;
+            const MAX_DIM = 1200;
+            if (width > MAX_DIM || height > MAX_DIM) {
+              const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+              width = Math.floor(width * ratio);
+              height = Math.floor(height * ratio);
+            }
+            canvas.width = width;
+            canvas.height = height;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            finalImagePreview = canvas.toDataURL('image/jpeg', quality);
+            while (Math.round((finalImagePreview.length * 3) / 4) > MAX_SIZE && quality > 0.1) {
+              quality -= 0.1;
+              finalImagePreview = canvas.toDataURL('image/jpeg', quality);
+            }
+            finalBase64Data = finalImagePreview.split(',')[1];
+            setImagePreview(finalImagePreview); // Save back to state
+            setBase64Data(finalBase64Data);
+          }
+        }
+      }
+
+      const projectData = {
+        userId: 'anonymous',
+        data,
+        imagePreview: finalImagePreview || null,
+        base64Data: finalBase64Data || null,
+        fileType: fileType || null,
+        wallHeight,
+        wallThickness,
+        imageDimensions: imageDimensions || null,
+        updatedAt: serverTimestamp()
+      };
+      
+      await setDoc(doc(db, 'projects', projectId), projectData, { merge: true });
+      
+      // Update saved projects list for returning users
+      const newProject = { id: projectId, date: new Date().toISOString() };
+      setSavedProjects(prev => {
+        const filtered = prev.filter(p => p.id !== projectId);
+        const updated = [newProject, ...filtered].slice(0, 20);
+        localStorage.setItem('saved_projects', JSON.stringify(updated));
+        return updated;
+      });
+      
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error("Autosave Error:", error);
+    } finally {
+      setIsAutoSaving(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (step !== 'upload') {
+      setHasUnsavedChanges(true);
+    }
+  }, [wallHeight, wallThickness, labelSize3D, showDoors, step]);
+
+  React.useEffect(() => {
+    if (hasUnsavedChanges && data && step !== 'upload') {
+      const timer = setTimeout(() => {
+        autoSaveProject();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasUnsavedChanges, data, wallHeight, wallThickness, imagePreview]);
+
   const handleUndo = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       setHistoryIndex(newIndex);
       setData(JSON.parse(JSON.stringify(history[newIndex])));
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -78,6 +185,7 @@ export default function App() {
       const newIndex = historyIndex + 1;
       setHistoryIndex(newIndex);
       setData(JSON.parse(JSON.stringify(history[newIndex])));
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -111,6 +219,7 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     const projectId = params.get('p');
     if (projectId) {
+      setCurrentProjectId(projectId);
       const loadSharedProject = async () => {
         setIsProcessing(true);
         try {
@@ -324,92 +433,24 @@ export default function App() {
   const handleShare = async () => {
     if (!data) return;
 
-    setIsSaving(true);
+    if (hasUnsavedChanges || !currentProjectId) {
+      await autoSaveProject();
+    }
+    
+    // Fallback to ensuring currentProjectId exists
+    if (!currentProjectId) {
+      console.error("No project ID generated.");
+      return;
+    }
+
+    const url = `${window.location.origin}${window.location.pathname}?p=${currentProjectId}`;
+    setShareUrl(url);
+
     try {
-      let finalImagePreview = imagePreview;
-      let finalBase64Data = base64Data;
-
-      if (imagePreview) {
-        // Approximate size of base64 string in bytes
-        const sizeInBytes = Math.round((imagePreview.length * 3) / 4);
-        const MAX_SIZE = 800000; // ~800KB
-
-        if (sizeInBytes > MAX_SIZE) {
-          const img = new Image();
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = imagePreview;
-          });
-
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          if (ctx) {
-            let width = img.width;
-            let height = img.height;
-            let quality = 0.7;
-            
-            // Scale down if dimensions are too large
-            const MAX_DIM = 1200;
-            if (width > MAX_DIM || height > MAX_DIM) {
-              const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
-              width = Math.floor(width * ratio);
-              height = Math.floor(height * ratio);
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            
-            // Draw image on white background (in case of transparent PNG)
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            finalImagePreview = canvas.toDataURL('image/jpeg', quality);
-            
-            // If still too large, reduce quality further
-            while (Math.round((finalImagePreview.length * 3) / 4) > MAX_SIZE && quality > 0.1) {
-              quality -= 0.1;
-              finalImagePreview = canvas.toDataURL('image/jpeg', quality);
-            }
-            
-            finalBase64Data = finalImagePreview.split(',')[1];
-          }
-        }
-      }
-
-      const projectId = Math.random().toString(36).substring(2, 15);
-      const projectData = {
-        userId: 'anonymous',
-        data,
-        imagePreview: finalImagePreview || null,
-        base64Data: finalBase64Data || null,
-        fileType: fileType || null,
-        wallHeight,
-        wallThickness,
-        imageDimensions: imageDimensions || null,
-        createdAt: serverTimestamp()
-      };
-      
-      await setDoc(doc(db, 'projects', projectId), projectData);
-      
-      const url = `${window.location.origin}${window.location.pathname}?p=${projectId}`;
-      setShareUrl(url);
-      
-      const newProject = { id: projectId, date: new Date().toISOString() };
-      const updatedProjects = [newProject, ...savedProjects].slice(0, 20); // Keep last 20
-      setSavedProjects(updatedProjects);
-      localStorage.setItem('saved_projects', JSON.stringify(updatedProjects));
-      
-      // Copy to clipboard
       await navigator.clipboard.writeText(url);
-      alert(`專案已儲存並產生分享網址！網址已複製到剪貼簿：\n${url}\n\n您也可以在「雲端專案」中找到此專案。`);
-    } catch (error) {
-      console.error("Error sharing project:", error);
-      alert("分享失敗，請確認資料庫權限。");
-    } finally {
-      setIsSaving(false);
+      alert(`專案已自動儲存在雲端並產生分享網址！\n網址已複製到剪貼簿：\n${url}\n\n您也可以在「雲端專案」中找到此專案。`);
+    } catch {
+      alert(`專案已自動儲存在雲端！您的網址：\n${url}`);
     }
   };
 
@@ -963,7 +1004,7 @@ export default function App() {
         )}
 
         {step === 'view3d' && data && (
-          <FloorPlan3D data={data} wallHeight={wallHeight} wallThickness={wallThickness} imageDimensions={imageDimensions} labelSize3D={labelSize3D} showDoors={showDoors} />
+          <FloorPlan3D data={data} wallHeight={wallHeight} wallThickness={wallThickness} imageDimensions={imageDimensions} labelSize3D={labelSize3D} showDoors={showDoors} onChange={updateData} />
         )}
 
         {/* Settings Modal */}

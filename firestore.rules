@@ -1,21 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    // Collection: projects
-    // Fields:
-    //   - userId: string (required) - UID of owner
-    //   - data: map (required) - FloorPlanData
-    //   - imagePreview: string (optional)
-    //   - base64Data: string (optional)
-    //   - fileType: string (optional)
-    //   - wallHeight: number (optional)
-    //   - wallThickness: number (optional)
-    //   - createdAt: timestamp (required)
-    // ===============================================================
-
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -24,25 +9,20 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isValidProject(data) {
-      return data.keys().hasAll(['userId', 'data', 'createdAt']) &&
-             data.userId is string &&
-             data.data is map &&
-             data.createdAt is timestamp;
-    }
-
     match /projects/{projectId} {
       // Allow anyone to read a project if they have the ID (for sharing)
       allow read: if true;
       
       // Allow anyone to create a project (for anonymous sharing)
-      allow create: if isValidProject(request.resource.data);
+      allow create: if request.resource.data.keys().hasAll(['userId', 'data']) &&
+                       request.resource.data.userId is string &&
+                       request.resource.data.data is map;
                       
-      allow update: if isOwner(resource.data.userId) &&
-                      request.resource.data.userId == resource.data.userId &&
-                      isValidProject(request.resource.data);
+      // Allow updates if the project is anonymous, or if the user is the owner
+      allow update: if (resource.data.userId == 'anonymous' || isOwner(resource.data.userId)) &&
+                       request.resource.data.userId == resource.data.userId;
                       
-      allow delete: if isOwner(resource.data.userId);
+      allow delete: if resource.data.userId == 'anonymous' || isOwner(resource.data.userId);
     }
   }
 }

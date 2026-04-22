@@ -3,7 +3,7 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Html, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { FloorPlanData } from '../lib/gemini';
-import { View, PersonStanding } from 'lucide-react';
+import { View, PersonStanding, X, Plus, Trash2 } from 'lucide-react';
 
 interface FloorPlan3DProps {
   data: FloorPlanData | null;
@@ -12,6 +12,7 @@ interface FloorPlan3DProps {
   imageDimensions: { width: number, height: number } | null;
   labelSize3D: number;
   showDoors?: boolean;
+  onChange?: (data: FloorPlanData) => void;
 }
 
 const SCALE = 0.02; // Scale down to manageable units
@@ -240,15 +241,39 @@ function CurvedWallMesh({
   );
 }
 
-export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, labelSize3D, showDoors = true }: FloorPlan3DProps) {
+export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, labelSize3D, showDoors = true, onChange }: FloorPlan3DProps) {
   const width = imageDimensions?.width || 1000;
   const heightDim = imageDimensions?.height || 1000;
   const [topDown, setTopDown] = React.useState(false);
   const [firstPerson, setFirstPerson] = React.useState(false);
   const [startMarker, setStartMarker] = React.useState<{x: number, z: number} | null>(null);
+  const [selectedRoomIndex, setSelectedRoomIndex] = React.useState<number | null>(null);
+  const [newNoteText, setNewNoteText] = React.useState("");
 
   const markerRef = useRef<SVGCircleElement>(null);
   const dirRef = useRef<SVGPathElement>(null);
+
+  const selectedRoom = selectedRoomIndex !== null && data ? data.rooms[selectedRoomIndex] : null;
+
+  const handleAddNote = () => {
+    if (!newNoteText.trim() || selectedRoomIndex === null || !data || !onChange) return;
+    const newData = { ...data };
+    const room = newData.rooms[selectedRoomIndex];
+    room.notes = room.notes || [];
+    room.notes.push(newNoteText.trim());
+    onChange(newData);
+    setNewNoteText("");
+  };
+
+  const handleDeleteNote = (noteIndex: number) => {
+    if (selectedRoomIndex === null || !data || !onChange) return;
+    const newData = { ...data };
+    const room = newData.rooms[selectedRoomIndex];
+    if (room.notes) {
+      room.notes.splice(noteIndex, 1);
+      onChange(newData);
+    }
+  };
 
   const splitWalls = React.useMemo(() => {
     if (!data) return [];
@@ -546,13 +571,19 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
               return (
                 <Html key={`room-label-${i}`} position={[posX, 0.1, posZ]} center distanceFactor={10}>
                   <div 
-                    className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full font-bold shadow-lg border border-slate-200 whitespace-nowrap select-none"
+                    onClick={() => setSelectedRoomIndex(i)}
+                    className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full font-bold shadow-lg border border-slate-200 whitespace-nowrap select-none cursor-pointer hover:bg-blue-50 hover:text-blue-600 transition-colors"
                     style={{ 
                       fontSize: `${labelSize3D}px`,
                       color: room.color || '#1e293b'
                     }}
                   >
                     {room.name}
+                    {room.notes && room.notes.length > 0 && (
+                      <span className="ml-2 bg-blue-100 text-blue-700 text-[0.7em] px-1.5 py-0.5 rounded-full">
+                        {room.notes.length}
+                      </span>
+                    )}
                   </div>
                 </Html>
               );
@@ -560,6 +591,67 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
           </group>
         )}
       </Canvas>
+
+      {/* Room Notes Modal/Sidebar */}
+      {selectedRoom && selectedRoomIndex !== null && (
+        <div className="absolute top-6 right-24 z-50 w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-right-4 duration-300">
+          <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <h3 className="font-bold text-slate-800 text-lg">{selectedRoom.name} - 設計註記</h3>
+            <button 
+              onClick={() => setSelectedRoomIndex(null)}
+              className="p-1 hover:bg-slate-200 rounded-full text-slate-500 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="p-4 flex-1 max-h-[60vh] overflow-y-auto space-y-3">
+            {selectedRoom.notes && selectedRoom.notes.length > 0 ? (
+              selectedRoom.notes.map((note, idx) => (
+                <div key={idx} className="group relative bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-start justify-between gap-2 shadow-sm transition-all hover:shadow-md">
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{note}</p>
+                  <button
+                    onClick={() => handleDeleteNote(idx)}
+                    className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                    title="刪除註記"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-6 text-slate-400 text-sm italic">
+                目前沒有任何註記，點擊下方新增。
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 border-t border-slate-100 bg-white">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddNote();
+                  }
+                }}
+                placeholder="輸入討論事項..."
+                className="flex-1 px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-ios-blue text-sm"
+              />
+              <button 
+                onClick={handleAddNote}
+                disabled={!newNoteText.trim()}
+                className="bg-ios-blue text-white p-2 rounded-xl disabled:opacity-50 transition-colors shadow-sm"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

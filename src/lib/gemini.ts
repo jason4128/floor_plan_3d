@@ -20,6 +20,7 @@ export interface Room {
   position: Point;
   fontSize?: number;
   color?: string;
+  notes?: string[];
 }
 
 export interface CurvedWall {
