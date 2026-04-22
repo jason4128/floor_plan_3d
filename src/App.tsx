@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, Eye, EyeOff, Settings, X, Undo2, Redo2, CheckSquare, Cloud, FolderOpen, ChevronLeft, ChevronRight, Ruler } from 'lucide-react';
+import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, Eye, EyeOff, Settings, X, Undo2, Redo2, CheckSquare, Cloud, FolderOpen, ChevronLeft, ChevronRight, Ruler, Copy } from 'lucide-react';
 import { FloorPlan3D } from './components/FloorPlan3D';
 import { FloorPlan2D } from './components/FloorPlan2D';
 import { analyzeFloorPlan, FloorPlanData } from './lib/gemini';
@@ -415,6 +415,38 @@ export default function App() {
     }
   };
 
+  const handleDuplicateProject = () => {
+    if (!data) return;
+    
+    // Check what the current name is, if any
+    const currentName = savedProjects.find(p => p.id === currentProjectId)?.name || "未命名專案";
+    const newName = `${currentName} (副本)`;
+    
+    // Gen new ID
+    const newProjectId = Math.random().toString(36).substring(2, 15);
+    
+    // Set to current
+    setCurrentProjectId(newProjectId);
+    window.history.pushState({}, '', `?p=${newProjectId}`);
+    
+    // Add to saved projects explicitly with the new name
+    const newProject = { 
+      id: newProjectId, 
+      date: new Date().toISOString(),
+      name: newName
+    };
+    
+    setSavedProjects(prev => {
+      const updated = [newProject, ...prev].slice(0, 20);
+      localStorage.setItem('saved_projects', JSON.stringify(updated));
+      return updated;
+    });
+
+    setHasUnsavedChanges(true); // This will trigger the autosave to actually persist it to Firebase
+    
+    alert(`已建立專案副本：「${newName}」！\n您現在正在編輯獨立的副本。`);
+  };
+
   const handleDownloadProject = () => {
     if (!data) return;
     const project = {
@@ -606,6 +638,12 @@ export default function App() {
                   className="ios-button-secondary w-full flex items-center justify-center gap-2 text-ios-blue"
                 >
                   <Download className="w-4 h-4" /> 下載專案檔
+                </button>
+                <button 
+                  onClick={handleDuplicateProject}
+                  className="ios-button-secondary w-full flex items-center justify-center gap-2 text-orange-500 border-orange-100 bg-orange-50/30"
+                >
+                  <Copy className="w-4 h-4" /> 建立專案副本
                 </button>
                 <button 
                   onClick={handleShare}
