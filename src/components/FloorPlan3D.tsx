@@ -504,7 +504,7 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
           <mesh position={[startMarker.x, 0.1, startMarker.z]}>
             <sphereGeometry args={[0.3, 16, 16]} />
             <meshStandardMaterial color="#3b82f6" />
-            <Html position={[0, 0.5, 0]} center>
+            <Html position={[0, 0.5, 0]} center zIndexRange={[100, 0]}>
               <div className="bg-blue-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap shadow-lg">
                 出發點
               </div>
@@ -569,7 +569,7 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
               const posX = (room.position.x - width / 2) * SCALE;
               const posZ = (room.position.y - heightDim / 2) * SCALE;
               return (
-                <Html key={`room-label-${i}`} position={[posX, 0.1, posZ]} center distanceFactor={10}>
+                <Html key={`room-label-${i}`} position={[posX, 0.1, posZ]} center distanceFactor={10} zIndexRange={[100, 0]}>
                   <div 
                     onClick={() => setSelectedRoomIndex(i)}
                     className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full font-bold shadow-lg border border-slate-200 whitespace-nowrap select-none cursor-pointer hover:bg-blue-50 hover:text-blue-600 transition-colors"
