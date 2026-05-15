@@ -244,7 +244,7 @@ function CurvedWallMesh({
 export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, labelSize3D, showDoors = true, onChange }: FloorPlan3DProps) {
   const width = imageDimensions?.width || 1000;
   const heightDim = imageDimensions?.height || 1000;
-  const [topDown, setTopDown] = React.useState(false);
+  const [topDown, setTopDown] = React.useState(true);
   const [firstPerson, setFirstPerson] = React.useState(false);
   const [startMarker, setStartMarker] = React.useState<{x: number, z: number} | null>(null);
   const [selectedRoomIndex, setSelectedRoomIndex] = React.useState<number | null>(null);

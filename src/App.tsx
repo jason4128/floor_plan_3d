@@ -17,7 +17,7 @@ export default function App() {
   const [step, setStep] = useState<Step>('upload');
   const [wallHeight, setWallHeight] = useState(2.3);
   const [wallThickness, setWallThickness] = useState(0.3);
-  const [labelSize3D, setLabelSize3D] = useState(16);
+  const [labelSize3D, setLabelSize3D] = useState(36);
   const [showDoors, setShowDoors] = useState(true);
   const [bgOpacity, setBgOpacity] = useState(0.5);
   const [lineOpacity, setLineOpacity] = useState(1.0);
