@@ -504,7 +504,7 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
           <mesh position={[startMarker.x, 0.1, startMarker.z]}>
             <sphereGeometry args={[0.3, 16, 16]} />
             <meshStandardMaterial color="#3b82f6" />
-            <Html position={[0, 0.5, 0]} center zIndexRange={[100, 0]}>
+            <Html position={[0, 0.5, 0]} center zIndexRange={[10, 0]}>
               <div className="bg-blue-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap shadow-lg">
                 出發點
               </div>
@@ -569,7 +569,7 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
               const posX = (room.position.x - width / 2) * SCALE;
               const posZ = (room.position.y - heightDim / 2) * SCALE;
               return (
-                <Html key={`room-label-${i}`} position={[posX, 0.1, posZ]} center distanceFactor={10} zIndexRange={[100, 0]}>
+                <Html key={`room-label-${i}`} position={[posX, 0.1, posZ]} center distanceFactor={10} zIndexRange={[10, 0]}>
                   <div 
                     onClick={() => setSelectedRoomIndex(i)}
                     className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full font-bold shadow-lg border border-slate-200 whitespace-nowrap select-none cursor-pointer hover:bg-blue-50 hover:text-blue-600 transition-colors"
@@ -594,7 +594,7 @@ export function FloorPlan3D({ data, wallHeight, wallThickness, imageDimensions, 
 
       {/* Room Notes Modal/Sidebar */}
       {selectedRoom && selectedRoomIndex !== null && (
-        <div className="absolute top-6 right-24 z-50 w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-right-4 duration-300">
+        <div className="absolute top-6 right-24 z-[9999] w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-right-4 duration-300">
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
             <h3 className="font-bold text-slate-800 text-lg">{selectedRoom.name} - 設計註記</h3>
             <button 
