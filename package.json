@@ -25,6 +25,7 @@
     "pdfjs-dist": "^5.6.205",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-joyride": "^3.1.0",
     "three": "^0.183.2",
     "vite": "^6.2.0"
   },

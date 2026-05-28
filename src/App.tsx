@@ -1,5 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, Eye, EyeOff, Settings, X, Undo2, Redo2, CheckSquare, Cloud, FolderOpen, ChevronLeft, ChevronRight, Ruler, Copy } from 'lucide-react';
+import { Upload, SlidersHorizontal, Loader2, Image as ImageIcon, Edit3, Box, Plus, Trash2, MousePointer2, Download, FileJson, Share2, Eye, EyeOff, Settings, X, Undo2, Redo2, CheckSquare, Cloud, FolderOpen, ChevronLeft, ChevronRight, Ruler, Copy, HelpCircle } from 'lucide-react';
+import * as JoyrideModule from 'react-joyride';
+import type { Step as JoyrideStep } from 'react-joyride';
+
+const Joyride = (JoyrideModule as any).default?.default || (JoyrideModule as any).default?.Joyride || (JoyrideModule as any).Joyride || (JoyrideModule as any).default;
+
+
 import { FloorPlan3D } from './components/FloorPlan3D';
 import { FloorPlan2D } from './components/FloorPlan2D';
 import { analyzeFloorPlan, FloorPlanData } from './lib/gemini';
@@ -53,6 +59,31 @@ export default function App() {
   // History for Undo/Redo
   const [history, setHistory] = useState<FloorPlanData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [runTutorial, setRunTutorial] = useState(false);
+  
+  const tutorialSteps: JoyrideStep[] = [
+    {
+      target: '.tutorial-step-1',
+      content: '這裡是您的專案管理區，您可以上傳新圖紙、匯入、下載或分享專案。',
+      disableBeacon: true,
+    },
+    {
+      target: '.tutorial-step-2',
+      content: '當上傳圖檔後，可使用「分析牆面」讓 AI 自動幫您畫出牆壁。',
+    },
+    {
+      target: '.tutorial-step-3',
+      content: '這是編輯工具列。提供游標選取、調整比例、畫牆面、畫曲線牆、加門與加文字等功能。快捷鍵：框選可一次選擇多個元素，Ctrl+Z 復原。',
+    },
+    {
+      target: '.tutorial-step-4',
+      content: '完成 2D 編輯後，點擊這生成按鈕，即可進入 3D 立體預覽！',
+    },
+    {
+      target: '.tutorial-step-5',
+      content: '進入 3D 模式後，您可以在這裡設定牆高與門窗等進階參數。',
+    }
+  ];
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -520,6 +551,24 @@ export default function App() {
   };
 
   return (
+    <>
+      <Joyride
+        steps={tutorialSteps}
+        run={runTutorial}
+        continuous={true}
+        showProgress={true}
+        showSkipButton={true}
+        styles={{
+          options: {
+            primaryColor: '#007AFF', // ios-blue
+          }
+        }}
+        callback={(data) => {
+          if (data.status === 'finished' || data.status === 'skipped') {
+            setRunTutorial(false);
+          }
+        }}
+      />
     <div className="flex h-screen w-full bg-[#F2F2F7] text-black overflow-hidden font-sans">
       {/* Left Panel: Controls */}
       <div className={`relative flex-shrink-0 transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${isSidebarOpen ? 'w-[320px]' : 'w-0'} z-20`}>
@@ -536,6 +585,13 @@ export default function App() {
                 </p>
               </div>
               <div className="flex gap-2">
+                <button 
+                  onClick={() => setRunTutorial(true)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
+                  title="功能教學"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </button>
                 <button 
                   onClick={() => setShowCloudProjects(true)}
                   className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
@@ -556,7 +612,7 @@ export default function App() {
 
           <div className="p-6 flex-1 overflow-y-auto flex flex-col gap-6">
             {/* Step 1: Upload */}
-            <div className={`space-y-3 ${step !== 'upload' ? 'opacity-50' : ''}`}>
+            <div className={`space-y-3 tutorial-step-1 ${step !== 'upload' ? 'opacity-50' : ''}`}>
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.05em] text-ios-gray flex items-center gap-2 px-1">
               <Upload className="w-3.5 h-3.5" /> 1. 上傳平面圖
             </h2>
@@ -580,7 +636,7 @@ export default function App() {
                   <span className="text-[11px] text-ios-gray mt-1">支援 JPG, PNG, WEBP 或 PDF</span>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 tutorial-step-2">
                   {imagePreview && (
                     <button 
                       onClick={handleAnalyze}
@@ -666,7 +722,7 @@ export default function App() {
               
               {step === 'edit2d' ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 tutorial-step-3">
                     <button 
                       onClick={() => setDrawMode('none')}
                       className={`flex items-center justify-center gap-2 py-2 px-3 rounded-[10px] text-sm font-medium transition-all ${drawMode === 'none' ? 'bg-ios-blue text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 active:bg-slate-50'}`}
@@ -856,7 +912,7 @@ export default function App() {
                     </div>
                   </div>
                   
-                  <div className="pt-2">
+                  <div className="pt-2 tutorial-step-4">
                     <button 
                       onClick={() => setStep('view3d')}
                       className="ios-button-primary w-full flex items-center justify-center gap-2 py-3 shadow-lg shadow-ios-blue/25"
@@ -878,7 +934,7 @@ export default function App() {
 
           {/* Step 3: 3D Controls */}
           {step === 'view3d' && (
-            <div className="space-y-4">
+            <div className="space-y-4 tutorial-step-5">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.05em] text-ios-gray flex items-center gap-2 px-1">
                 <SlidersHorizontal className="w-3.5 h-3.5" /> 3. 3D 控制
               </h2>
@@ -1214,5 +1270,6 @@ export default function App() {
         )}
       </div>
     </div>
+    </>
   );
 }
